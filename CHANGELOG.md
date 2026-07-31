@@ -1,5 +1,13 @@
 # Change Log
 
+## 0.2.0
+
+- Require an explicit `delphiXe7.compilerPath` before building or showing a Build Plan.
+- Remove the default project and default configuration settings.
+- Read configurations from the selected `.dproj` and prompt for the exact configuration to build.
+- Keep Rebuild in the Command Palette while removing it from the Explorer context menu.
+- Hide Show Build Plan in the Explorer context menu by default, controlled by `delphiXe7.showBuildPlanMenu`.
+
 ## 0.1.4
 
 - Clear completed builds from the status bar immediately instead of waiting for the success notification to be dismissed.

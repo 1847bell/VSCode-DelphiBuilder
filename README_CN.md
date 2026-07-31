@@ -2,14 +2,14 @@
 
 通过 Visual Studio Code 直接调用 `DCC32.exe`，编译 Delphi XE7 Win32 项目。
 
-当前版本：`0.1.4`
+当前版本：`0.2.0`
 
 ## 功能
 
 - 从 `.dproj` 自动定位对应的 `.dpr` 或 `.dpk`
 - 支持 Debug、Release 和项目自定义配置
 - 支持 Build、Rebuild 和取消编译
-- 自动发现 BDS 15.0、XE7 环境变量和 Win32 Library Path
+- 读取 BDS 15.0、XE7 环境变量和 Win32 Library Path
 - 生成可查看、可序列化的 Build Plan
 - 将 Error、Fatal、Warning 和 Hint 发布到 VS Code Problems 面板
 - 支持点击诊断跳转到对应源码行
@@ -22,10 +22,10 @@
 使用 VS Code 命令行安装打包好的 VSIX：
 
 ```powershell
-code --install-extension "D:\OthCode\DelphiBuilder\delphi-xe7-build-0.1.4.vsix"
+code --install-extension "D:\OthCode\DelphiBuilder\delphi-xe7-build-0.2.0.vsix"
 ```
 
-也可以在 VS Code 扩展视图右上角菜单中选择“从 VSIX 安装...”，然后选择 `delphi-xe7-build-0.1.4.vsix`。
+也可以在 VS Code 扩展视图右上角菜单中选择“从 VSIX 安装...”，然后选择 `delphi-xe7-build-0.2.0.vsix`。
 
 安装或更新后，建议重新加载 VS Code 窗口。
 
@@ -35,12 +35,14 @@ code --install-extension "D:\OthCode\DelphiBuilder\delphi-xe7-build-0.1.4.vsix"
 
 | 命令 | 说明 |
 |------|------|
-| `Delphi XE7: Build Project` | 增量编译当前项目 |
+| `Delphi XE7: Build Project...` | 读取项目配置，选择后增量编译当前项目 |
 | `Delphi XE7: Rebuild Project` | 添加 `-B`，重新编译项目及其依赖单元 |
 | `Delphi XE7: Cancel Build` | 终止当前 DCC32 进程及其子进程 |
 | `Delphi XE7: Show Build Plan` | 查看最终编译器、环境、工作目录、参数和预期产物 |
 
-在资源管理器中右键 `.dproj` 文件，也可以直接执行 Build、Rebuild 或 Show Build Plan。
+在资源管理器中右键 `.dproj` 文件，可以执行 `Build Project...`。如果项目包含多个配置，随后弹出的选择列表会显示 `Build Project Debug`、`Build Project Release` 等选项；只有一个配置时直接使用该配置。
+
+Rebuild 仍可从命令面板执行，但不占用右键菜单。Show Build Plan 始终可从命令面板执行；右键菜单入口由 `delphiXe7.showBuildPlanMenu` 控制，默认隐藏。
 
 状态栏中的 `Delphi XE7` 按钮用于启动编译；编译期间按钮会变为运行状态，单击可取消编译。
 
@@ -48,18 +50,18 @@ code --install-extension "D:\OthCode\DelphiBuilder\delphi-xe7-build-0.1.4.vsix"
 
 1. 使用 VS Code 打开包含 `.dproj` 的工作区。
 2. 将工作区标记为 Trusted Workspace。执行编译时必须信任工作区。
-3. 首次使用先执行 `Delphi XE7: Show Build Plan`。
-4. 检查 `compilerPath`、`workingDirectory`、配置、平台、搜索路径和输出目录。
-5. 确认 Build Plan 中没有未解析宏或关键警告。
-6. 执行 Build 或 Rebuild。
-7. 在 Output 面板查看完整 DCC32 输出，在 Problems 面板查看可跳转的诊断。
+3. 显式设置 `delphiXe7.compilerPath`；为空时构建会直接报错。
+4. 首次使用可从命令面板执行 `Delphi XE7: Show Build Plan`。
+5. 检查 `compilerPath`、`workingDirectory`、配置、平台、搜索路径和输出目录。
+6. 确认 Build Plan 中没有未解析宏或关键警告。
+7. 右键 `.dproj` 执行 Build，并选择项目实际声明的配置。
+8. 在 Output 面板查看完整 DCC32 输出，在 Problems 面板查看可跳转的诊断。
 
 当工作区中存在多个 `.dproj` 时，扩展会弹出项目选择列表。项目选择优先级为：
 
 ```text
 命令参数或右键选择的 .dproj
 -> 当前编辑器打开的 .dproj
--> delphiXe7.defaultProject
 -> 工作区内搜索到的 .dproj
 ```
 
@@ -70,8 +72,7 @@ code --install-extension "D:\OthCode\DelphiBuilder\delphi-xe7-build-0.1.4.vsix"
 ```json
 {
   "delphiXe7.compilerPath": "D:\\Program Files (x86)\\Embarcadero\\Studio\\15.0\\bin\\DCC32.exe",
-  "delphiXe7.defaultProject": "Project\\MyApplication.dproj",
-  "delphiXe7.defaultConfiguration": "Debug",
+  "delphiXe7.showBuildPlanMenu": "hide",
   "delphiXe7.outputEncoding": "system",
   "delphiXe7.additionalArguments": [],
   "delphiXe7.environment": {}
@@ -80,14 +81,13 @@ code --install-extension "D:\OthCode\DelphiBuilder\delphi-xe7-build-0.1.4.vsix"
 
 | 设置项 | 默认值 | 说明 |
 |--------|--------|------|
-| `delphiXe7.compilerPath` | 空 | `DCC32.exe` 的绝对路径。为空时从 BDS 15.0 注册表自动发现 |
-| `delphiXe7.defaultProject` | 空 | 默认 `.dproj`，可以是绝对路径或相对工作区的路径 |
-| `delphiXe7.defaultConfiguration` | `Debug` | 项目包含该配置时优先使用 |
+| `delphiXe7.compilerPath` | 空 | 必填，`DCC32.exe` 的绝对路径；为空时构建报错 |
+| `delphiXe7.showBuildPlanMenu` | `hide` | `.dproj` 右键菜单是否显示 Show Build Plan，可选 `hide`、`show` |
 | `delphiXe7.outputEncoding` | `system` | DCC32 输出编码，可选 `system`、`cp936`、`utf8` |
 | `delphiXe7.additionalArguments` | `[]` | 在主源码参数之前追加的 DCC32 参数数组 |
 | `delphiXe7.environment` | `{}` | 在 XE7 注册表环境之后覆盖的环境变量 |
 
-如果自动发现的编译器不可用，应明确设置 `delphiXe7.compilerPath`。不要通过 `cmd.exe` 拼接完整命令，额外参数应分别写入数组：
+扩展不会自动选择 DCC32，必须明确设置 `delphiXe7.compilerPath`。不要通过 `cmd.exe` 拼接完整命令，额外参数应分别写入数组：
 
 ```json
 {
@@ -152,14 +152,14 @@ Build Plan 是扩展最终交给编译器的构建描述，主要包含：
 
 ### 找不到 DCC32.exe
 
-先确认 Delphi XE7 已安装，并检查：
+先确认 Delphi XE7 已安装，并将 `delphiXe7.compilerPath` 设置为实际编译器绝对路径。扩展仍会从以下位置读取 XE7 环境和 Library Path，但不会用注册表值替代空的编译器设置：
 
 ```text
 HKCU\Software\Embarcadero\BDS\15.0
 HKLM\Software\Embarcadero\BDS\15.0
 ```
 
-如果安装目录与注册表不一致，请设置 `delphiXe7.compilerPath`。
+如果该设置为空，构建会提示先配置 DCC32 路径。
 
 ### 提示找不到 dcc32compiler.exe
 
@@ -241,9 +241,9 @@ npm run package
 
 ## 验证状态
 
-版本 `0.1.4` 当前已通过：
+版本 `0.2.0` 当前已通过：
 
-- 23 项常规测试
+- 25 项常规测试
 - 2 项真实 Delphi XE7 集成测试
 - TypeScript 严格类型检查
 - esbuild 打包

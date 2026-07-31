@@ -114,17 +114,36 @@
 ## 会话：2026-07-31（配置与菜单重构）
 
 ### 阶段 6：基线与需求确认
-- **状态：** in_progress
+- **状态：** complete
 - 已恢复历史规划文件并运行 session-catchup。
 - 确认当前目录不是 Git 仓库；用户已明确授权初始化并提交当前 0.1.4 状态。
 - 已初始化 `main` 分支并暂存 43 个基线文件；生成物和依赖均由 `.gitignore` 排除。
-- 待完成：创建基线提交、验证 VS Code 菜单能力、实现配置重构。
+- 已创建基线提交 `76ed7b4 chore: establish Delphi XE7 builder baseline`，提交后工作区干净。
+- 确认 VS Code 贡献菜单是静态清单，不能按 dproj 内容或字符串数组动态创建菜单标题。
+- 决定使用右键 `Build Project...` 后读取 dproj 配置并弹出 Quick Pick；Rebuild 移出右键但保留命令面板。
+
+### 阶段 6：配置与菜单实现
+- **状态：** complete
+- 已在 `buildCommands.ts` 增加空 compilerPath 报错，移除默认项目/配置读取，并按 dproj 配置生成 Quick Pick 选项。
+- 已在 `package.json` 移除两个默认设置和 Rebuild 右键项，增加默认 hide 的 `showBuildPlanMenu`。
+- 已增加 manifest 回归测试并将开发版本提升到 0.2.0。
+- 定向验证通过：extension manifest 2 项、dproj parser 4 项、TypeScript 严格检查。
+- 已更新中英文 README 和 Changelog，说明 DCC 路径必填、配置 Quick Pick、Rebuild 命令面板入口及 Build Plan 菜单显隐。
+- 静态审查确认旧 defaultProject/defaultConfiguration 仅存在于“必须不存在”的测试断言中，package.json 可正常解析。
+- 完整验证通过：25/25 常规测试、2/2 真实 XE7 集成测试、TypeScript 检查、esbuild 和 VSIX 打包。
+- 已生成 `delphi-xe7-build-0.2.0.vsix`；打包仅有既有的 repository/LICENSE 元数据警告。
+- `git diff --check` 通过，当前变更仅含预期源码、清单、测试、文档和规划文件，VSIX/测试产物未进入 Git 状态。
+- 逐段 diff 审查通过，功能与文档范围符合本轮五项需求。
+- 明确边界：本轮未泛化 BDS 15.0 环境解析，Delphi 13 支持需在独立提交中校准。
+- 本轮以 0.2.0 配置与菜单重构功能提交收尾。
 
 ### 本轮错误日志
 | 时间戳 | 错误 | 尝试次数 | 解决方案 |
 |--------|------|---------|---------|
 | 2026-07-31 | `git diff --stat`：当前目录不是 Git 仓库 | 1 | 按用户要求初始化本地 Git 仓库并提交基线 |
 | 2026-07-31 | `git diff --cached --check`：规划文档两处既有行尾空格 | 1 | 与本轮无关，记录后保留，不扩大改动范围 |
+| 2026-07-31 | planning skill 的 `check-complete.ps1` 因乱码产生 PowerShell 解析错误 | 1 | 改用 `check-complete.sh` 完成收尾检查 |
+| 2026-07-31 | PowerShell 无法从 PATH 找到 `sh` | 1 | 定位 Git Bash 后使用 `C:\Program Files\Git\bin\bash.exe` 绝对路径 |
 
 ---
 *每个阶段完成后或遇到错误时更新此文件*

@@ -26,6 +26,12 @@
 - VS Code 清单菜单是静态声明，不能在右键打开时按当前 `.dproj` 内容动态新增任意菜单项；需要用预声明命令、子菜单或单个命令内 Quick Pick 实现。
 - `.gitignore` 已排除 `node_modules/`、`dist/`、`*.vsix` 和测试输出，适合直接建立源码基线；本机 Git 用户身份已配置。
 - 基线暂存包含 43 个源码/测试/文档文件；`VS Code规划.md` 有两处既有行尾空格，按最小改动原则保留。
+- `resolveConfiguration` 对命令传入配置会直接交给 dproj 求值器校验并应用；删除默认配置设置后，可保留该强制语义。
+- 没有命令传入配置时，右键命令读取 `BuildConfiguration`，排除 Base；多个配置用 Quick Pick，单个直接使用，零个明确报错而不假定 Debug。
+- `config.<setting>` 可用于静态菜单 `when` 条件，因此 `showBuildPlanMenu` 可以用 hide/show 枚举控制；Rebuild 从 explorer/context 删除但命令继续贡献。
+- DCC 路径校验应在创建 Build Plan 前读取 resource-scoped `compilerPath` 并拒绝空字符串；注册表仍用于 XE7 环境和 Library Path，不再用于替用户选择编译器。
+- README 仍描述编译器自动发现、defaultProject/defaultConfiguration 和三个右键命令，需要与 0.2.0 行为同步；英文 README 也需改为 compilerPath 必填和配置 Quick Pick。
+- 0.2.0 完整验证通过 25 项常规测试和 2 项真实 XE7 集成测试；VSIX 打包成功，repository/LICENSE 警告是上架前元数据事项，不阻塞本轮功能。
 
 ## 技术决策
 | 决策 | 理由 |

@@ -41,8 +41,10 @@ export class BuildCommands implements vscode.Disposable {
       throw new Error(`A build is already running for ${path.basename(projectFile)}.`);
     }
 
-    const configuration = await this.resolveConfiguration(projectFile, commandOptions.configuration);
-    const plan = await this.makePlan(projectFile, configuration, rebuild);
+    const compilerPath = this.resolveCompilerPath(projectFile);
+    const action = rebuild ? "Rebuild Project" : "Build Project";
+    const configuration = await this.resolveConfiguration(projectFile, commandOptions.configuration, action);
+    const plan = await this.makePlan(projectFile, configuration, rebuild, compilerPath);
     this.diagnostics.clear(projectFile);
     this.writePlanSummary(plan, rebuild);
     this.output.show(true);
@@ -108,8 +110,13 @@ export class BuildCommands implements vscode.Disposable {
     const commandOptions = parseCommandOptions(argument);
     assertWin32(commandOptions.platform);
     const projectFile = await this.resolveProject(argument, commandOptions);
-    const configuration = await this.resolveConfiguration(projectFile, commandOptions.configuration);
-    const plan = await this.makePlan(projectFile, configuration, false);
+    const compilerPath = this.resolveCompilerPath(projectFile);
+    const configuration = await this.resolveConfiguration(
+      projectFile,
+      commandOptions.configuration,
+      "Show Build Plan"
+    );
+    const plan = await this.makePlan(projectFile, configuration, false, compilerPath);
     const document = await vscode.workspace.openTextDocument({
       language: "json",
       content: JSON.stringify(redactBuildPlan(plan), null, 2)
@@ -144,7 +151,8 @@ export class BuildCommands implements vscode.Disposable {
   private async makePlan(
     projectFile: string,
     configuration: string,
-    rebuild: boolean
+    rebuild: boolean,
+    compilerPath: string
   ): Promise<BuildPlan> {
     const resource = vscode.Uri.file(projectFile);
     const settings = vscode.workspace.getConfiguration("delphiXe7", resource);
@@ -152,7 +160,7 @@ export class BuildCommands implements vscode.Disposable {
       projectFile,
       configuration,
       rebuild,
-      compilerPath: settings.get<string>("compilerPath", ""),
+      compilerPath,
       additionalArguments: settings.get<string[]>("additionalArguments", []),
       environment: settings.get<Record<string, string>>("environment", {})
     });
@@ -173,12 +181,6 @@ export class BuildCommands implements vscode.Disposable {
     const activeFile = vscode.window.activeTextEditor?.document.uri;
     if (activeFile?.scheme === "file" && isDproj(activeFile.fsPath)) {
       return path.resolve(activeFile.fsPath);
-    }
-
-    const configured = vscode.workspace.getConfiguration("delphiXe7")
-      .get<string>("defaultProject", "").trim();
-    if (configured) {
-      return resolveConfiguredPath(configured);
     }
 
     const projects = await vscode.workspace.findFiles("**/*.dproj", "**/{node_modules,.git}/**");
@@ -202,36 +204,46 @@ export class BuildCommands implements vscode.Disposable {
     return selected.uri.fsPath;
   }
 
-  private async resolveConfiguration(projectFile: string, requested?: string): Promise<string> {
+  private async resolveConfiguration(
+    projectFile: string,
+    requested: string | undefined,
+    action: string
+  ): Promise<string> {
     if (requested) {
       return requested;
     }
     const configurations = discoverConfigurations(await readFile(projectFile, "utf8"))
       .filter((item) => item.name.toLocaleLowerCase() !== "base");
     if (configurations.length === 0) {
-      return "Debug";
-    }
-
-    const configured = vscode.workspace.getConfiguration("delphiXe7", vscode.Uri.file(projectFile))
-      .get<string>("defaultConfiguration", "Debug");
-    const defaultMatch = configurations.find(
-      (item) => item.name.toLocaleLowerCase() === configured.toLocaleLowerCase()
-    );
-    if (defaultMatch) {
-      return defaultMatch.name;
+      throw new Error(`No build configurations were found in ${path.basename(projectFile)}.`);
     }
     if (configurations.length === 1) {
       return configurations[0].name;
     }
 
     const selected = await vscode.window.showQuickPick(
-      configurations.map((item) => item.name),
-      { placeHolder: "Select a Delphi build configuration" }
+      configurations.map((item) => ({
+        label: `${action} ${item.name}`,
+        description: `${item.name}|Win32`,
+        configuration: item.name
+      })),
+      { placeHolder: `Select a configuration for ${path.basename(projectFile)}` }
     );
     if (!selected) {
       throw new CancellationError();
     }
-    return selected;
+    return selected.configuration;
+  }
+
+  private resolveCompilerPath(projectFile: string): string {
+    const compilerPath = vscode.workspace
+      .getConfiguration("delphiXe7", vscode.Uri.file(projectFile))
+      .get<string>("compilerPath", "")
+      .trim();
+    if (!compilerPath) {
+      throw new Error("DCC32 compiler path is not configured. Set 'delphiXe7.compilerPath' before building.");
+    }
+    return compilerPath;
   }
 
   private writePlanSummary(plan: BuildPlan, rebuild: boolean): void {

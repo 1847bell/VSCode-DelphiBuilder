@@ -4,12 +4,12 @@ Build Delphi XE7 Win32 projects from Visual Studio Code by invoking `DCC32.exe` 
 
 ## Commands
 
-- `Delphi XE7: Build Project`
+- `Delphi XE7: Build Project...`
 - `Delphi XE7: Rebuild Project`
 - `Delphi XE7: Cancel Build`
 - `Delphi XE7: Show Build Plan`
 
-The extension discovers BDS 15.0 through the Windows registry unless `delphiXe7.compilerPath` is set. Use **Show Build Plan** before the first build to verify the compiler, working directory, configuration, search paths, output directories, and command arguments.
+`delphiXe7.compilerPath` is required. Right-click a `.dproj` and select **Build Project...**; the extension reads the project and prompts for one of its declared configurations. Rebuild remains available from the Command Palette. **Show Build Plan** is always available from the Command Palette and can be enabled in the Explorer context menu with `delphiXe7.showBuildPlanMenu`.
 
 ## Current scope
 

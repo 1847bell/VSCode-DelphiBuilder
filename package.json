@@ -2,7 +2,7 @@
   "name": "delphi-xe7-build",
   "displayName": "Delphi XE7 Build",
   "description": "Build Delphi XE7 Win32 projects with DCC32 from Visual Studio Code.",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "publisher": "local",
   "engines": {
     "vscode": "^1.85.0"
@@ -27,7 +27,7 @@
     "commands": [
       {
         "command": "delphiXe7.buildProject",
-        "title": "Delphi XE7: Build Project",
+        "title": "Delphi XE7: Build Project...",
         "icon": "$(tools)"
       },
       {
@@ -54,14 +54,9 @@
           "group": "navigation@10"
         },
         {
-          "command": "delphiXe7.rebuildProject",
-          "when": "resourceExtname == .dproj",
-          "group": "navigation@11"
-        },
-        {
           "command": "delphiXe7.showBuildPlan",
-          "when": "resourceExtname == .dproj",
-          "group": "navigation@12"
+          "when": "resourceExtname == .dproj && config.delphiXe7.showBuildPlanMenu == show",
+          "group": "navigation@11"
         }
       ]
     },
@@ -72,19 +67,21 @@
           "type": "string",
           "default": "",
           "scope": "resource",
-          "description": "Absolute path to the Delphi XE7 DCC32.exe. Leave empty to discover BDS 15.0 from the registry."
+          "description": "Required absolute path to the Delphi XE7 DCC32.exe. Builds fail when this setting is empty."
         },
-        "delphiXe7.defaultProject": {
+        "delphiXe7.showBuildPlanMenu": {
           "type": "string",
-          "default": "",
+          "enum": [
+            "hide",
+            "show"
+          ],
+          "enumItemLabels": [
+            "Hide",
+            "Show"
+          ],
+          "default": "hide",
           "scope": "resource",
-          "description": "Default .dproj path, absolute or relative to the workspace folder."
-        },
-        "delphiXe7.defaultConfiguration": {
-          "type": "string",
-          "default": "Debug",
-          "scope": "resource",
-          "description": "Configuration selected when the project defines it."
+          "description": "Show or hide the Show Build Plan command in the .dproj Explorer context menu."
         },
         "delphiXe7.outputEncoding": {
           "type": "string",
