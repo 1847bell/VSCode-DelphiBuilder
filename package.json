@@ -1,0 +1,141 @@
+{
+  "name": "delphi-xe7-build",
+  "displayName": "Delphi XE7 Build",
+  "description": "Build Delphi XE7 Win32 projects with DCC32 from Visual Studio Code.",
+  "version": "0.1.4",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "delphi",
+    "dcc32",
+    "xe7"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onCommand:delphiXe7.buildProject",
+    "onCommand:delphiXe7.rebuildProject",
+    "onCommand:delphiXe7.cancelBuild",
+    "onCommand:delphiXe7.showBuildPlan"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "delphiXe7.buildProject",
+        "title": "Delphi XE7: Build Project",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "delphiXe7.rebuildProject",
+        "title": "Delphi XE7: Rebuild Project",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "delphiXe7.cancelBuild",
+        "title": "Delphi XE7: Cancel Build",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "delphiXe7.showBuildPlan",
+        "title": "Delphi XE7: Show Build Plan",
+        "icon": "$(list-tree)"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "delphiXe7.buildProject",
+          "when": "resourceExtname == .dproj",
+          "group": "navigation@10"
+        },
+        {
+          "command": "delphiXe7.rebuildProject",
+          "when": "resourceExtname == .dproj",
+          "group": "navigation@11"
+        },
+        {
+          "command": "delphiXe7.showBuildPlan",
+          "when": "resourceExtname == .dproj",
+          "group": "navigation@12"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Delphi XE7 Build",
+      "properties": {
+        "delphiXe7.compilerPath": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "Absolute path to the Delphi XE7 DCC32.exe. Leave empty to discover BDS 15.0 from the registry."
+        },
+        "delphiXe7.defaultProject": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "Default .dproj path, absolute or relative to the workspace folder."
+        },
+        "delphiXe7.defaultConfiguration": {
+          "type": "string",
+          "default": "Debug",
+          "scope": "resource",
+          "description": "Configuration selected when the project defines it."
+        },
+        "delphiXe7.outputEncoding": {
+          "type": "string",
+          "enum": [
+            "system",
+            "cp936",
+            "utf8"
+          ],
+          "default": "system",
+          "scope": "resource",
+          "description": "Encoding used to decode DCC32 output."
+        },
+        "delphiXe7.additionalArguments": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "scope": "resource",
+          "description": "Additional DCC32 arguments appended before the main source file."
+        },
+        "delphiXe7.environment": {
+          "type": "object",
+          "default": {},
+          "scope": "resource",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Environment variables applied to DCC32 after the XE7 registry environment."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:xe7": "vitest run --config vitest.integration.config.ts",
+    "package": "npm run check && npm run test && npm run compile && vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^5.2.5",
+    "iconv-lite": "^0.6.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.6.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.0"
+  }
+}

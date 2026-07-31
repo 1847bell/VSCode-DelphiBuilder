@@ -1,0 +1,7 @@
+node_modules/
+dist/
+coverage/
+*.vsix
+*.log
+test/fixtures/bin/
+test/fixtures/dcu/

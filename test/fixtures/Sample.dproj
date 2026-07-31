@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectVersion>15.0</ProjectVersion>
+    <MainSource>Sample.dpr</MainSource>
+    <DCC_UnitSearchPath>src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Base)'!=''">
+    <DCC_Define>BASE</DCC_Define>
+    <DCC_Namespace>System;Xml;$(DCC_Namespace)</DCC_Namespace>
+    <DCC_ExeOutput>.\bin\$(Config)</DCC_ExeOutput>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Base_Win32)'!=''">
+    <DCC_Namespace>Winapi;System.Win;$(DCC_Namespace)</DCC_Namespace>
+    <DCC_UsePackage>rtl;vcl;$(DCC_UsePackage)</DCC_UsePackage>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Cfg_1)'!='' and '$(Platform)'=='Win32'">
+    <DCC_Define>$(DCC_Define);DEBUG</DCC_Define>
+    <DCC_DcuOutput>.\dcu\Win32\Debug</DCC_DcuOutput>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Cfg_2)'!=''">
+    <DCC_Define>$(DCC_Define);RELEASE</DCC_Define>
+    <DCC_Optimization>true</DCC_Optimization>
+  </PropertyGroup>
+  <ItemGroup>
+    <BuildConfiguration Include="Base">
+      <Key>Base</Key>
+    </BuildConfiguration>
+    <BuildConfiguration Include="Debug">
+      <Key>Cfg_1</Key>
+      <CfgParent>Base</CfgParent>
+    </BuildConfiguration>
+    <BuildConfiguration Include="Release">
+      <Key>Cfg_2</Key>
+      <CfgParent>Base</CfgParent>
+    </BuildConfiguration>
+  </ItemGroup>
+  <Import Project="$(BDS)\Bin\CodeGear.Delphi.Targets" />
+</Project>

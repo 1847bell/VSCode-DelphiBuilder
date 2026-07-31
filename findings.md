@@ -1,0 +1,55 @@
+# 发现与决策
+
+## 需求
+- Windows-only VS Code 扩展，目标 Delphi XE7/BDS 15.0、DCC32、Win32。
+- 从 `.dproj` 生成 BuildPlan，支持 Build、Rebuild、Cancel、Show Build Plan。
+- 编译输出进入 Output Channel，诊断进入 Problems 面板。
+- 搜索路径顺序、配置继承、宏、输出目录和编码是兼容性重点。
+
+## 研究发现
+- 当前工作区只有 `VS Code规划.md`，尚无代码，也不是 Git 仓库。
+- codebase memory 仅索引到该规划文档，没有既有实现可复用。
+- 最大风险是绕过 MSBuild 后自行复现 `.dproj` 求值和 DCC task 参数映射。
+- 本机已安装 Node 24.14.0、npm 11.19.0 和 VS Code 1.131.0，可直接开发、测试和打包扩展。
+- 代码库记忆索引尚未包含新源码，打包前审查改用 `rg` 和 VSCE 文件清单。
+- 所有外部进程均使用参数数组和 `shell:false`；未发现 eval、cmd 拼接或待办占位。
+- Delphi 项目常通过 `$(DCC_UnitSearchPath)` 继承全局路径，因此注册表 Library Path 必须在 dproj 求值前注入。
+- 本机 BDS 15.0 安装在 `D:\Program Files (x86)\Embarcadero\Studio\15.0`，可执行真实 XE7 集成测试。
+- Win32 Library Path 含 BDS 与第三方 `$(...)` 宏，必须在 `%VAR%` 展开后继续执行大小写不敏感的 MSBuild 属性展开。
+- `rsvars.bat` 是 BDSCOMMONDIR 的权威来源；BDSLIB 由 RootDir 下的 `lib` 派生。
+- 注册表环境变量 `Path` 使用 `$(path)` 继承前值，环境必须按系统、rsvars、注册表、用户覆盖逐项求值。
+- 本机默认 DCC32.exe 是依赖缺失 dcc32compiler.exe 的启动器；DCC32.EXE.old 是可执行的原编译器，需通过 compilerPath 覆盖测试。
+- XE7 DCC32 用裸 CR 刷新编译进度，诊断解析必须同时把 CR 和 LF 视为记录边界。
+- XE7 自带 dcc32.cfg 含 Unit Alias 和全局搜索路径；BuildPlan 必须披露该隐式参数来源。
+- 当前实现已迭代到 0.1.4，真实项目校准修复了自引用属性、运行时包条件、Include Path、全局 Fatal 诊断和完成状态栏清理。
+- 本轮用户要求 DCC 路径显式配置，不再自动发现；移除默认项目和默认配置，右键构建必须带明确配置。
+- VS Code 清单菜单是静态声明，不能在右键打开时按当前 `.dproj` 内容动态新增任意菜单项；需要用预声明命令、子菜单或单个命令内 Quick Pick 实现。
+- `.gitignore` 已排除 `node_modules/`、`dist/`、`*.vsix` 和测试输出，适合直接建立源码基线；本机 Git 用户身份已配置。
+- 基线暂存包含 43 个源码/测试/文档文件；`VS Code规划.md` 有两处既有行尾空格，按最小改动原则保留。
+
+## 技术决策
+| 决策 | 理由 |
+|------|------|
+| 使用 fast-xml-parser 的 preserveOrder 模式 | PropertyGroup 顺序会影响 MSBuild 属性覆盖结果 |
+| 使用参数数组和 shell:false 启动 DCC32 | 避免 shell 注入和 Windows 引号拼接问题 |
+| 使用 iconv-lite 解码编译器 Buffer 输出 | XE7 输出可能使用 CP936/系统代码页 |
+| 注册表通过 reg.exe 查询 | 避免原生 Node 模块影响 VSIX 打包 |
+
+## 遇到的问题
+| 问题 | 解决方案 |
+|------|---------|
+| 缺少真实 XE7 基准项目 | 用 fixture 验证确定性逻辑，并把未校准项作为警告和后续输入 |
+| 首次真实 XE7 测试发现 BDSLIB/BDSCOMMONDIR 未展开 | 增加 rsvars 解析及分层环境求值后重试 |
+| 默认 DCC32.exe 无法启动其内部编译器 | 保留安装目录原状，以 compilerPath 覆盖到 DCC32.EXE.old 继续验证 |
+| 真实错误未被正则匹配 | 原始格式含裸 CR 进度记录；解析前按 CR/LF 拆分 |
+| 当前目录没有 Git 历史 | 本轮按用户明确要求初始化本地仓库并先提交 0.1.4 基线 |
+
+## 资源
+- `VS Code规划.md`
+- 本机 BDS 15.0 注册表和 DCC32，用于实机校准。
+
+## 视觉/浏览器发现
+- 本任务当前无需浏览器或视觉检查。
+
+---
+*每执行2次查看/浏览器/搜索操作后更新此文件*

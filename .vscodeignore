@@ -1,0 +1,15 @@
+.vscode/**
+.gitignore
+src/**
+test/**
+coverage/**
+*.md
+!README.md
+tsconfig.json
+vitest.config.ts
+vitest.integration.config.ts
+esbuild.mjs
+task_plan.md
+findings.md
+progress.md
+VS Code规划.md
