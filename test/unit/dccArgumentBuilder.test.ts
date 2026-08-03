@@ -23,6 +23,9 @@ describe("buildDccArguments", () => {
       DCC_Define: "BASE;DEBUG",
       DCC_UnitSearchPath: "src;common",
       DCC_IncludePath: "headers",
+      DCC_ResourcePath: "resources",
+      DCC_TranslatedResourcePath: "translated-resources",
+      BRCC_OutputDir: "brcc",
       DCC_ExeOutput: ".\\bin\\Debug",
       DCC_DcuOutput: ".\\dcu\\Debug",
       DCC_Optimize: "false",
@@ -39,6 +42,7 @@ describe("buildDccArguments", () => {
       "-DBASE;DEBUG",
       `-U${path.resolve(base, "src")};${path.resolve(base, "common")};${path.resolve(base, "library")}`,
       `-I${path.resolve(base, "headers")};${path.resolve(base, "src")};${path.resolve(base, "common")};${path.resolve(base, "library")}`,
+      `-R${path.resolve(base, "translated-resources")};${path.resolve(base, "brcc")};${path.resolve(base, "src")};${path.resolve(base, "common")};${path.resolve(base, "resources")};${path.resolve(base, "library")}`,
       `-E${path.resolve(base, "bin/Debug")}`,
       `-N0${path.resolve(base, "dcu/Debug")}`,
       "-$O-",
@@ -69,6 +73,19 @@ describe("buildDccArguments", () => {
     expect(result.arguments).not.toContain("-V");
     expect(result.arguments).not.toContain("-V-");
     expect(result.warnings).toEqual([]);
+  });
+
+  it("uses the unit and BDS library paths to find resources without an explicit Resource Path", () => {
+    const result = buildDccArguments(evaluation({
+      DCC_UnitSearchPath: "project-units"
+    }), {
+      libraryPath: "library"
+    });
+
+    const base = path.dirname(projectFile);
+    expect(result.arguments).toContain(
+      `-R${path.resolve(base, "project-units")};${path.resolve(base, "library")}`
+    );
   });
 
   it("maps XE7 debug information properties to their official arguments", () => {

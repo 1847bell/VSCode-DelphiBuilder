@@ -15,7 +15,6 @@ export interface DccArgumentResult {
 }
 
 const PATH_SWITCHES: Array<[string, string]> = [
-  ["DCC_ResourcePath", "-R"],
   ["DCC_ObjPath", "-O"]
 ];
 
@@ -109,6 +108,19 @@ export function buildDccArguments(
     args.push(`-I${resolvePathList(includePath, projectDirectory)}`);
   }
   handled.add("dcc_includepath");
+
+  const resourcePath = mergePathLists(
+    getExpanded(properties, "DCC_TranslatedResourcePath"),
+    getExpanded(properties, "BRCC_OutputDir"),
+    getExpanded(properties, "DCC_UnitSearchPath"),
+    getExpanded(properties, "DCC_ResourcePath"),
+    options.libraryPath
+  );
+  if (resourcePath) {
+    args.push(`-R${resolvePathList(resourcePath, projectDirectory)}`);
+  }
+  handled.add("dcc_translatedresourcepath");
+  handled.add("dcc_resourcepath");
 
   for (const [propertyName, flag] of PATH_SWITCHES) {
     const value = getExpanded(properties, propertyName);

@@ -4,7 +4,7 @@
 交付一个可打包的 VS Code 扩展首版，能够从 `.dproj` 生成可审查的 BuildPlan，并通过 DCC32 执行 Build/Rebuild、取消构建和发布诊断。
 
 ## 当前阶段
-阶段 7：XE7 DCC 参数一致性修复（已完成）
+阶段 8：XE7 资源搜索路径修复（已完成）
 
 ## 各阶段
 
@@ -56,6 +56,15 @@
 - [x] 审查差异、校验规划记录并提交 Git commit
 - **状态：** complete
 
+### 阶段 8：XE7 资源搜索路径修复
+- [x] 对照 XE7 Targets 和真实 Build Plan 确认 `-R` 路径语义
+- [x] 修复 VCL、FireDAC `.res/.dfm` 资源搜索路径生成
+- [x] 增加资源路径参数回归测试
+- [x] 更新补丁版本、文档和变更日志
+- [x] 执行类型检查、常规测试、XE7 实机测试和 VSIX 打包
+- [x] 审查差异并创建可回退的 Git commit
+- **状态：** complete
+
 ## 关键问题
 1. 真实 XE7 `.dproj` 的属性覆盖和 DCC 参数需由脱敏样本与 IDE 命令行校准。
 2. 本地 Git 仓库已建立；`76ed7b4` 是 0.1.4 可还原基线。
@@ -69,6 +78,7 @@
 | 右键使用单个 Build Project... + 配置 Quick Pick | VS Code 菜单清单不能根据 dproj 或配置数组动态生成标题和数量 |
 | Rebuild 仅从右键菜单移除 | `-B` 对清理陈旧 DCU 仍有价值，保留命令面板入口 |
 | DCC 参数以 XE7 自带 `dcctask.xml` 为准 | 避免把 `DCC_DebugDCUs` 错映射成 `-V`，导致 Release 产物携带调试信息 |
+| 禁用 `dcc32.cfg` 后显式生成完整 `-R` | 保证 Build Plan 与实际资源查找路径一致，避免 VCL/FireDAC 资源依赖隐式配置 |
 
 ## 遇到的错误
 | 错误 | 尝试次数 | 解决方案 |

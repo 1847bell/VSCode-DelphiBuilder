@@ -2,7 +2,7 @@
 
 通过 Visual Studio Code 直接调用 `DCC32.exe`，编译 Delphi XE7 Win32 项目。
 
-当前版本：`0.2.1`
+当前版本：`0.2.2`
 
 ## 功能
 
@@ -16,16 +16,17 @@
 - 支持系统代码页、CP936/GBK 和 UTF-8 编译输出
 - 支持中文路径和包含空格的路径
 - 每次编译固定使用 `--no-config`，防止 `.cfg` 隐式改变 Build Plan
+- 按 XE7 Targets 生成完整 `-R`，支持 VCL、FireDAC 的 `.res/.dfm` 资源查找
 
 ## 安装
 
 使用 VS Code 命令行安装打包好的 VSIX：
 
 ```powershell
-code --install-extension "D:\OthCode\DelphiBuilder\delphi-xe7-build-0.2.1.vsix"
+code --install-extension "D:\OthCode\DelphiBuilder\delphi-xe7-build-0.2.2.vsix"
 ```
 
-也可以在 VS Code 扩展视图右上角菜单中选择“从 VSIX 安装...”，然后选择 `delphi-xe7-build-0.2.1.vsix`。
+也可以在 VS Code 扩展视图右上角菜单中选择“从 VSIX 安装...”，然后选择 `delphi-xe7-build-0.2.2.vsix`。
 
 安装或更新后，建议重新加载 VS Code 窗口。
 
@@ -203,6 +204,8 @@ HKLM\Software\Embarcadero\BDS\15.0
 
 从 `0.2.1` 开始，扩展固定传入 `--no-config`，不会再加载编译器目录或项目目录中的 `dcc32.cfg`。需要的 Unit Alias、搜索路径和其他参数应来自 `.dproj`、BDS 注册表或 `delphiXe7.additionalArguments`，以保证 Build Plan 与实际命令一致。
 
+从 `0.2.2` 开始，扩展会按照 XE7 `CodeGear.Delphi.Targets` 合并翻译资源目录、BRCC 输出目录、项目 Unit Search Path、项目 Resource Path 和 BDS Win32 Library Path，并显式传入 `-R`。这用于解决 BDS 可以编译、插件却提示 `Controls.res`、`midas.res`、`Vcl.DBLogDlg.dfm` 或 FireDAC `.dfm` 找不到的问题。
+
 ### Release 产物为什么接近 Debug 大小
 
 `DCC_DebugDCUs` 表示使用带调试信息的 Delphi DCU，它本身不等于“向 EXE 写入调试信息”。`0.2.1` 已按 XE7 官方 DCC task 修正以下映射：
@@ -255,9 +258,9 @@ npm run package
 
 ## 验证状态
 
-版本 `0.2.1` 当前已通过：
+版本 `0.2.2` 当前已通过：
 
-- 32 项常规测试
+- 33 项常规测试
 - 2 项真实 Delphi XE7 集成测试
 - TypeScript 严格类型检查
 - esbuild 打包

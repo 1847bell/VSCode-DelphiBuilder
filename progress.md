@@ -168,3 +168,26 @@
 |--------|------|---------|---------|
 | 2026-08-03 | PowerShell 中组合 `rg` 正则的引号转义导致表达式未闭合 | 1 | 改用单引号和分离模式重新执行，只读检查未影响文件 |
 | 2026-08-03 | 首次 0.2.1 VSIX 文件清单包含未跟踪的 `Untitled-1.json` | 1 | 在 `.vscodeignore` 排除 `Untitled-*.json`，并显式纳入中文 README 后重新打包 |
+
+## 会话：2026-08-03（XE7 资源搜索路径修复）
+
+### 阶段 8：根因校准
+- **状态：** complete
+- 用户业务项目通过 BDS 编译，但插件报告 38 个 VCL/FireDAC `.res/.dfm` 缺失错误。
+- 会话恢复与 `git diff --stat` 已完成；跟踪文件无未提交改动，`Untitled-1.json` 保持未跟踪。
+- 初步确认插件禁用 `dcc32.cfg` 后没有将完整库/单元搜索路径补入 `-R`，下一步对照 XE7 Targets 验证。
+- 已确认 XE7 Targets 会将翻译资源、BRCC 输出、项目 Unit Search Path、项目 Resource Path 和全局 Delphi Library Path 合并后传给 DCC ResourcePath。
+- 已确认用户 Build Plan 完全缺少 `-R`，根因成立；修复不需要重新启用 `dcc32.cfg`。
+- 已在本机 XE7 安装中验证缺失名称对应的资源文件位于 Win32 release 库路径，修复方案可用真实安装验证。
+- 已增加缺少显式 Resource Path 的回归测试；修复前按预期失败（参数数组没有 `-R`），证明测试能复现根因。
+- 已按 XE7 Targets 顺序实现显式 `-R`，定向参数测试 12/12 和 TypeScript 严格检查通过。
+- 真实 XE7 集成测试 2/2 通过，确认 DCC32 接受新资源路径且现有成功/失败编译行为不回归。
+- 补丁版本已提升到 0.2.2，并更新中英文 README 和变更日志。
+- 完整验证通过：33/33 项常规测试、2/2 项真实 XE7 集成测试、TypeScript 严格检查、esbuild 和 VSIX 打包。
+- 最终 VSIX 为 `delphi-xe7-build-0.2.2.vsix`，大小 577881 字节；包内不含用户 Build Plan 样本。
+- VSIX SHA-256：`E7D3077EC564879D666773DA357769FDD23A0199FC5DA277F45C2EE995F16A90`。
+
+### 本轮错误日志
+| 时间戳 | 错误 | 尝试次数 | 解决方案 |
+|--------|------|---------|---------|
+| 2026-08-03 | 新增资源路径回归测试失败，实际参数没有 `-R` | 1 | 作为根因复现保留测试，按 XE7 Targets 实现完整 ResourcePath 合并 |

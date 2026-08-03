@@ -2,7 +2,7 @@
 
 Build Delphi XE7 Win32 projects from Visual Studio Code by invoking `DCC32.exe` directly.
 
-Version `0.2.1` aligns debug-information, symbol-reference, optimization, and Debug DCU handling with the Delphi XE7 DCC task metadata. Every build includes `--no-config`, so a local `dcc32.cfg` cannot silently change the reviewed Build Plan.
+Version `0.2.2` mirrors the XE7 ResourcePath construction and explicitly passes `-R`, allowing VCL and FireDAC `.res`/`.dfm` files to be found without relying on `dcc32.cfg`. Version `0.2.1` aligned debug-information, symbol-reference, optimization, and Debug DCU handling with the Delphi XE7 DCC task metadata.
 
 ## Commands
 

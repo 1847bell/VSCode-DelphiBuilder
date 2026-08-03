@@ -38,6 +38,11 @@
 - 官方优化属性名是 `DCC_Optimize`，不是当前实现使用的 `DCC_Optimization`；为避免本机 `dcc32.cfg` 污染结果，每次构建都应传 `--no-config`。
 - 固定传入 `--no-config` 后，原先“DCC32 may load implicit compiler arguments”警告不再成立，应同时移除 Build Plan 的 `.cfg` 探测，避免误导。
 - VSCE 默认会打包未被 `.vscodeignore` 排除的未跟踪文件；本轮已排除 `Untitled-*.json` 并显式将 `README_CN.md` 纳入 VSIX。
+- 用户业务项目在 0.2.1 下集中报 `Controls.res`、`midas.res`、VCL/FireDAC `.dfm` 找不到；现有实现只把完整 Unit Search Path 传给 `-U/-I`，`-R` 仅使用显式 `DCC_ResourcePath`，这是当前首要排查点。
+- XE7 `CodeGear.Delphi.Targets` 第 132-138 行明确构造 ResourcePath：`DCC_TranslatedResourcePath`、`BRCC_OutputDir`、`DCC_UnitSearchPath`、`DCC_ResourcePath`、`DelphiLibraryPath`；当前插件没有复现这段逻辑。
+- 用户提供的 0.2.0 Build Plan 参数包含完整 `-U/-I`，但没有任何 `-R`；本机 `dcc32.cfg` 也只有 Unit Alias 和 `-U`，所以不能依赖恢复 cfg 解决资源查找，必须显式生成 `-R`。
+- 本机 XE7 的 `lib\\win32\\release` 实际包含 `midas.res`、`CategoryButtons.res` 和 FireDAC VCLUI `.dfm` 等资源，证明将全局 Delphi Library Path 纳入 `-R` 可直接解决同类错误。
+- 0.2.2 已按官方顺序生成显式 `-R`，同时保留 `--no-config`；无需在“构建可复现”和“资源可找到”之间二选一。
 
 ## 技术决策
 | 决策 | 理由 |

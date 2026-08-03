@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.2.2
+
+- Match the Delphi XE7 ResourcePath construction and always emit an explicit `-R` argument.
+- Include translated resources, BRCC output, project unit/resource paths, and the BDS Win32 Library Path in resource lookup.
+- Fix missing VCL and FireDAC resources such as `Controls.res`, `midas.res`, and `FireDAC.VCLUI.Login.dfm` when `dcc32.cfg` is disabled.
+
 ## 0.2.1
 
 - Match the Delphi XE7 DCC task mappings for debug information, symbol references, and optimization.
