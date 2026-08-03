@@ -1,5 +1,12 @@
 # Change Log
 
+## 0.2.1
+
+- Match the Delphi XE7 DCC task mappings for debug information, symbol references, and optimization.
+- Treat `DCC_DebugDCUs` as a Debug DCU search-path setting instead of emitting `-V`.
+- Read the BDS 15.0 Win32 Debug DCU Path and prepend it when Debug DCUs are enabled.
+- Pass `--no-config` on every build so `dcc32.cfg` cannot silently alter the Build Plan.
+
 ## 0.2.0
 
 - Require an explicit `delphiXe7.compilerPath` before building or showing a Build Plan.

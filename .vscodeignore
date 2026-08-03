@@ -5,6 +5,8 @@ test/**
 coverage/**
 *.md
 !README.md
+!README_CN.md
+Untitled-*.json
 tsconfig.json
 vitest.config.ts
 vitest.integration.config.ts

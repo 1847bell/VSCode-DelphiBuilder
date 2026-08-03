@@ -4,7 +4,7 @@
 交付一个可打包的 VS Code 扩展首版，能够从 `.dproj` 生成可审查的 BuildPlan，并通过 DCC32 执行 Build/Rebuild、取消构建和发布诊断。
 
 ## 当前阶段
-阶段 6：配置与菜单重构（已完成）
+阶段 7：XE7 DCC 参数一致性修复（已完成）
 
 ## 各阶段
 
@@ -47,6 +47,15 @@
 - [x] 更新测试、文档、版本并完成打包验证
 - **状态：** complete
 
+### 阶段 7：XE7 DCC 参数一致性修复
+- [x] 按 XE7 官方 DCC task 元数据修正 Debug/Release 编译参数映射
+- [x] 读取并注入 Win32 Debug DCU Path，禁用 dcc32.cfg 隐式参数
+- [x] 增加参数与环境解析回归测试
+- [x] 更新 0.2.1 版本、文档与变更日志
+- [x] 执行类型检查、常规测试、XE7 实机测试和 VSIX 打包
+- [x] 审查差异、校验规划记录并提交 Git commit
+- **状态：** complete
+
 ## 关键问题
 1. 真实 XE7 `.dproj` 的属性覆盖和 DCC 参数需由脱敏样本与 IDE 命令行校准。
 2. 本地 Git 仓库已建立；`76ed7b4` 是 0.1.4 可还原基线。
@@ -59,6 +68,7 @@
 | 对未支持的 dproj 内容发出警告 | 避免静默产生与 IDE 不一致的构建 |
 | 右键使用单个 Build Project... + 配置 Quick Pick | VS Code 菜单清单不能根据 dproj 或配置数组动态生成标题和数量 |
 | Rebuild 仅从右键菜单移除 | `-B` 对清理陈旧 DCU 仍有价值，保留命令面板入口 |
+| DCC 参数以 XE7 自带 `dcctask.xml` 为准 | 避免把 `DCC_DebugDCUs` 错映射成 `-V`，导致 Release 产物携带调试信息 |
 
 ## 遇到的错误
 | 错误 | 尝试次数 | 解决方案 |

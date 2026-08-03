@@ -147,3 +147,24 @@
 
 ---
 *每个阶段完成后或遇到错误时更新此文件*
+
+## 会话：2026-08-03（XE7 DCC 参数一致性修复）
+
+### 阶段 7：根因确认与实现准备
+- **状态：** complete
+- 已依据同事的 Release Build Plan 和 XE7 官方 `CodeGear.Delphi.Targets`/`dcctask.xml` 确认错误参数映射。
+- 已确认工作区仅有未跟踪的用户样本 `Untitled-1.json`，本轮不会修改或提交该文件。
+- 计划将版本提升到 0.2.1，修复 Debug DCU、调试信息、符号信息、优化开关和隐式 dcc32.cfg 行为。
+- 已实现 `--no-config`、XE7 三态调试/符号参数、`DCC_DebugInfoInExe` 和 `DCC_Optimize` 官方映射。
+- 已从 BDS Win32 注册表读取并展开 Debug DCU Path，按 XE7 Targets 顺序前置到 `-U`，不再由 `DCC_DebugDCUs` 生成 `-V`。
+- 已移除与 `--no-config` 冲突的 `.cfg` 隐式参数警告。
+- 定向验证通过：16/16 项相关测试和 TypeScript 严格检查。
+- 完整验证通过：32/32 项常规测试、2/2 项真实 XE7 集成测试、TypeScript 严格检查、esbuild 和 VSIX 打包。
+- 最终 VSIX 为 `delphi-xe7-build-0.2.1.vsix`，包含中英文 README，不包含用户样本。
+- VSIX SHA-256：`08F610C9BD2D27CC13B7F1533E2FB8E01CC73FC7C487933E1526C5E37B0F4DB9`。
+
+### 本轮错误日志
+| 时间戳 | 错误 | 尝试次数 | 解决方案 |
+|--------|------|---------|---------|
+| 2026-08-03 | PowerShell 中组合 `rg` 正则的引号转义导致表达式未闭合 | 1 | 改用单引号和分离模式重新执行，只读检查未影响文件 |
+| 2026-08-03 | 首次 0.2.1 VSIX 文件清单包含未跟踪的 `Untitled-1.json` | 1 | 在 `.vscodeignore` 排除 `Untitled-*.json`，并显式纳入中文 README 后重新打包 |

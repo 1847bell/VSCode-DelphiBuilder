@@ -2,6 +2,8 @@
 
 Build Delphi XE7 Win32 projects from Visual Studio Code by invoking `DCC32.exe` directly.
 
+Version `0.2.1` aligns debug-information, symbol-reference, optimization, and Debug DCU handling with the Delphi XE7 DCC task metadata. Every build includes `--no-config`, so a local `dcc32.cfg` cannot silently change the reviewed Build Plan.
+
 ## Commands
 
 - `Delphi XE7: Build Project...`
@@ -16,6 +18,7 @@ Build Delphi XE7 Win32 projects from Visual Studio Code by invoking `DCC32.exe` 
 - Windows, Delphi XE7/BDS 15.0, DCC32 and Win32 only
 - `.dproj` projects whose build can be represented by direct DCC32 arguments
 - Debug, Release and project-defined configurations
+- BDS 15.0 Win32 Library Path and Debug DCU Path expansion
 
 Imported MSBuild targets and build events are not executed. Unsupported project properties are reported in the Build Plan warnings so they are not silently ignored.
 

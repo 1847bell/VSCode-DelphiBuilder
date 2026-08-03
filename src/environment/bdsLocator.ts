@@ -11,6 +11,7 @@ export interface BdsEnvironment {
   compilerPath: string;
   variables: Record<string, string>;
   libraryPath: string;
+  debugDcuPath: string;
   warnings: string[];
 }
 
@@ -58,15 +59,13 @@ export async function resolveBdsEnvironment(
     ...await queryRegistry(`HKCU\\${BDS_KEY}\\Library\\Win32`)
   };
   const libraryPropertyBag = new PropertyBag({ ...process.env, ...variables, Platform: "Win32" });
-  const percentExpandedLibraryPath = expandPercentValue(
-    libraryValues["Search Path"] ?? "",
-    libraryPropertyBag
-  );
-  const expandedLibraryPath = expandProperties(
-    percentExpandedLibraryPath,
+  const expandedLibraryPath = expandBdsPath(libraryValues["Search Path"] ?? "", libraryPropertyBag);
+  const expandedDebugDcuPath = expandBdsPath(
+    libraryValues["Debug DCU Path"] ?? "",
     libraryPropertyBag
   );
   const libraryPath = expandedLibraryPath.value;
+  const debugDcuPath = expandedDebugDcuPath.value;
 
   if (!registryRoot && !compilerOverride?.trim()) {
     warnings.push("BDS 15.0 RootDir was not found in the 32-bit registry view; using the default XE7 path.");
@@ -80,13 +79,20 @@ export async function resolveBdsEnvironment(
   for (const name of expandedLibraryPath.unresolved) {
     warnings.push(`Unresolved BDS Library Path property: $(${name}).`);
   }
+  for (const name of expandedDebugDcuPath.unresolved) {
+    warnings.push(`Unresolved BDS Debug DCU Path property: $(${name}).`);
+  }
   for (const [name, value] of Object.entries(variables)) {
     if (/\$\([^)]+\)|%[^%]+%/.test(value)) {
       warnings.push(`Unresolved BDS environment variable reference in ${name}: ${value}`);
     }
   }
 
-  return { rootDir, compilerPath, variables, libraryPath, warnings };
+  return { rootDir, compilerPath, variables, libraryPath, debugDcuPath, warnings };
+}
+
+function expandBdsPath(value: string, properties: PropertyBag): ReturnType<typeof expandProperties> {
+  return expandProperties(expandPercentValue(value, properties), properties);
 }
 
 async function readRoot(hive: "HKCU" | "HKLM"): Promise<string> {

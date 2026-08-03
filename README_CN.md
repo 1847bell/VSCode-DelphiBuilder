@@ -2,30 +2,30 @@
 
 通过 Visual Studio Code 直接调用 `DCC32.exe`，编译 Delphi XE7 Win32 项目。
 
-当前版本：`0.2.0`
+当前版本：`0.2.1`
 
 ## 功能
 
 - 从 `.dproj` 自动定位对应的 `.dpr` 或 `.dpk`
 - 支持 Debug、Release 和项目自定义配置
 - 支持 Build、Rebuild 和取消编译
-- 读取 BDS 15.0、XE7 环境变量和 Win32 Library Path
+- 读取 BDS 15.0、XE7 环境变量、Win32 Library Path 和 Debug DCU Path
 - 生成可查看、可序列化的 Build Plan
 - 将 Error、Fatal、Warning 和 Hint 发布到 VS Code Problems 面板
 - 支持点击诊断跳转到对应源码行
 - 支持系统代码页、CP936/GBK 和 UTF-8 编译输出
 - 支持中文路径和包含空格的路径
-- 检测 `.cfg` 等隐式编译参数来源并在 Build Plan 中提示
+- 每次编译固定使用 `--no-config`，防止 `.cfg` 隐式改变 Build Plan
 
 ## 安装
 
 使用 VS Code 命令行安装打包好的 VSIX：
 
 ```powershell
-code --install-extension "D:\OthCode\DelphiBuilder\delphi-xe7-build-0.2.0.vsix"
+code --install-extension "D:\OthCode\DelphiBuilder\delphi-xe7-build-0.2.1.vsix"
 ```
 
-也可以在 VS Code 扩展视图右上角菜单中选择“从 VSIX 安装...”，然后选择 `delphi-xe7-build-0.2.0.vsix`。
+也可以在 VS Code 扩展视图右上角菜单中选择“从 VSIX 安装...”，然后选择 `delphi-xe7-build-0.2.1.vsix`。
 
 安装或更新后，建议重新加载 VS Code 窗口。
 
@@ -123,7 +123,7 @@ Build Plan 是扩展最终交给编译器的构建描述，主要包含：
 - 最终环境变量
 - 保持顺序的 DCC32 参数数组
 - 预期 EXE、DLL 或 BPL 产物
-- 未支持属性、未解析宏、MSBuild Import 和 `.cfg` 提示
+- 未支持属性、未解析宏和 MSBuild Import 提示
 
 显示 Build Plan 时，名称中包含 token、secret、password 或 API key 的环境变量会自动脱敏。
 
@@ -193,13 +193,27 @@ HKLM\Software\Embarcadero\BDS\15.0
 
 - `-U`、`-I`、`-R`、`-O` 的内容和顺序
 - BDS Win32 Library Path 中的宏是否已展开
-- 项目目录或编译器目录是否存在 `.cfg`
+- Build Plan 是否以 `--no-config` 开头
 - Runtime Packages、Namespace 和 Unit Alias
 - 当前选择的 Config 和 Platform
 
 搜索路径顺序不同可能导致引用另一个同名单元，即使路径内容看起来相同。
 
 从 `0.1.3` 开始，扩展会像 XE7/MSBuild 一样，将完整 Unit Search Path 同时传给 DCC32 的 `-U` 和 `-I`。这也适用于 FastReport 单元通过 `{$I frx.inc}` 引用位于 Library Path 其他目录中的包含文件。
+
+从 `0.2.1` 开始，扩展固定传入 `--no-config`，不会再加载编译器目录或项目目录中的 `dcc32.cfg`。需要的 Unit Alias、搜索路径和其他参数应来自 `.dproj`、BDS 注册表或 `delphiXe7.additionalArguments`，以保证 Build Plan 与实际命令一致。
+
+### Release 产物为什么接近 Debug 大小
+
+`DCC_DebugDCUs` 表示使用带调试信息的 Delphi DCU，它本身不等于“向 EXE 写入调试信息”。`0.2.1` 已按 XE7 官方 DCC task 修正以下映射：
+
+- `DCC_DebugDCUs=true`：只将 Debug DCU Path 前置到 `-U`，不再产生 `-V`
+- `DCC_DebugInfoInExe=true`：产生 `-V` 和 `-VN`
+- `DCC_DebugInformation=0/1/2`：分别产生 `-$D0`、`-$D1`、`-$D2`
+- `DCC_SymbolReferenceInfo=0/1/2`：分别产生 `-$Y-`、`-$YD`、`-$Y+`
+- `DCC_Optimize=true/false`：分别产生 `-$O+`、`-$O-`
+
+搜索路径中出现皮肤源码目录，并不会自动把所有皮肤链接进 EXE。应优先检查 Build Plan 中是否仍有 `-V`、`-VN`、Map File 参数，以及项目源码是否实际引用了皮肤单元。
 
 ### IDE 能编译，但提示 Required package not found
 
@@ -241,9 +255,9 @@ npm run package
 
 ## 验证状态
 
-版本 `0.2.0` 当前已通过：
+版本 `0.2.1` 当前已通过：
 
-- 25 项常规测试
+- 32 项常规测试
 - 2 项真实 Delphi XE7 集成测试
 - TypeScript 严格类型检查
 - esbuild 打包

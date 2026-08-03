@@ -32,6 +32,12 @@
 - DCC 路径校验应在创建 Build Plan 前读取 resource-scoped `compilerPath` 并拒绝空字符串；注册表仍用于 XE7 环境和 Library Path，不再用于替用户选择编译器。
 - README 仍描述编译器自动发现、defaultProject/defaultConfiguration 和三个右键命令，需要与 0.2.0 行为同步；英文 README 也需改为 compilerPath 必填和配置 Quick Pick。
 - 0.2.0 完整验证通过 25 项常规测试和 2 项真实 XE7 集成测试；VSIX 打包成功，repository/LICENSE 警告是上架前元数据事项，不阻塞本轮功能。
+- 同事的 Release Build Plan 出现 `-$L+ -V -GD`，其中 `-V` 来自插件把 `DCC_DebugDCUs=true` 错映射为编译开关，是产物接近 Debug 体积的主要原因。
+- XE7 官方 `dcctask.xml` 定义：`DCC_DebugInformation=0/1/2` 对应 `-$D0/1/2`，`DCC_SymbolReferenceInfo=0/1/2` 对应 `-$Y-/-$YD/-$Y+`，`DCC_DebugInfoInExe=true` 对应 `-V -VN`。
+- `DCC_DebugDCUs` 本身不产生开关；为 true 时应把 Delphi Debug DCU 路径前置到 Unit Search Path。
+- 官方优化属性名是 `DCC_Optimize`，不是当前实现使用的 `DCC_Optimization`；为避免本机 `dcc32.cfg` 污染结果，每次构建都应传 `--no-config`。
+- 固定传入 `--no-config` 后，原先“DCC32 may load implicit compiler arguments”警告不再成立，应同时移除 Build Plan 的 `.cfg` 探测，避免误导。
+- VSCE 默认会打包未被 `.vscodeignore` 排除的未跟踪文件；本轮已排除 `Untitled-*.json` 并显式将 `README_CN.md` 纳入 VSIX。
 
 ## 技术决策
 | 决策 | 理由 |
@@ -40,6 +46,7 @@
 | 使用参数数组和 shell:false 启动 DCC32 | 避免 shell 注入和 Windows 引号拼接问题 |
 | 使用 iconv-lite 解码编译器 Buffer 输出 | XE7 输出可能使用 CP936/系统代码页 |
 | 注册表通过 reg.exe 查询 | 避免原生 Node 模块影响 VSIX 打包 |
+| Debug DCU Path 从 BDS 15.0 `Library\\Win32` 注册表读取 | 与 IDE/XE7 Targets 的环境来源保持一致 |
 
 ## 遇到的问题
 | 问题 | 解决方案 |

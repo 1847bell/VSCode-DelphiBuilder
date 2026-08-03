@@ -5,6 +5,7 @@ import { expandProperties, PropertyBag } from "../project/propertyResolver";
 export interface DccArgumentOptions {
   rebuild?: boolean;
   libraryPath?: string;
+  debugDcuPath?: string;
   additionalArguments?: string[];
 }
 
@@ -34,12 +35,11 @@ const OUTPUT_SWITCHES: Array<[string, string]> = [
 const BOOLEAN_DIRECTIVES: Array<[string, string]> = [
   ["DCC_BooleanEvaluation", "B"],
   ["DCC_Assertions", "C"],
-  ["DCC_DebugInformation", "D"],
   ["DCC_LongStrings", "H"],
   ["DCC_IOChecking", "I"],
   ["DCC_WriteableConst", "J"],
   ["DCC_LocalDebugSymbols", "L"],
-  ["DCC_Optimization", "O"],
+  ["DCC_Optimize", "O"],
   ["DCC_OpenStringParams", "P"],
   ["DCC_OverflowChecking", "Q"],
   ["DCC_RangeChecking", "R"],
@@ -67,7 +67,7 @@ export function buildDccArguments(
   const properties = new PropertyBag(evaluation.properties);
   const projectDirectory = path.dirname(evaluation.projectFile);
   const warnings: string[] = [];
-  const args: string[] = [];
+  const args: string[] = ["--no-config"];
   const handled = new Set<string>();
 
   for (const [propertyName, flag] of VALUE_SWITCHES) {
@@ -83,7 +83,14 @@ export function buildDccArguments(
   handled.add("dcc_usepackage");
   handled.add("dcc_enabledpackages");
 
+  const debugDcus = getExpanded(properties, "DCC_DebugDCUs");
+  const debugDcusEnabled = parseOptionalBoolean(debugDcus, "DCC_DebugDCUs", warnings);
+  handled.add("dcc_debugdcus");
+
   const unitSearchPath = mergePathLists(
+    debugDcusEnabled ? getExpanded(properties, "DCC_TranslatedDebugLibraryPath") : undefined,
+    debugDcusEnabled ? options.debugDcuPath : undefined,
+    getExpanded(properties, "DCC_TranslatedLibraryPath"),
     getExpanded(properties, "DCC_UnitSearchPath"),
     options.libraryPath
   );
@@ -91,6 +98,8 @@ export function buildDccArguments(
     args.push(`-U${resolvePathList(unitSearchPath, projectDirectory)}`);
   }
   handled.add("dcc_unitsearchpath");
+  handled.add("dcc_translateddebuglibrarypath");
+  handled.add("dcc_translatedlibrarypath");
 
   const includePath = mergePathLists(
     getExpanded(properties, "DCC_IncludePath"),
@@ -130,14 +139,27 @@ export function buildDccArguments(
     handled.add(propertyName.toLocaleLowerCase());
   }
 
-  const debugDcus = getExpanded(properties, "DCC_DebugDCUs");
-  if (debugDcus) {
-    const enabled = parseBoolean(debugDcus);
-    if (enabled !== undefined) {
-      args.push(enabled ? "-V" : "-V-");
-    }
+  addEnumDirective(args, handled, properties, "DCC_DebugInformation", {
+    "0": "-$D0",
+    "1": "-$D1",
+    "2": "-$D2"
+  }, warnings);
+  addEnumDirective(args, handled, properties, "DCC_SymbolReferenceInfo", {
+    "0": "-$Y-",
+    "1": "-$YD",
+    "2": "-$Y+"
+  }, warnings);
+
+  const debugInfoInExe = getExpanded(properties, "DCC_DebugInfoInExe");
+  const debugInfoInExeEnabled = parseOptionalBoolean(
+    debugInfoInExe,
+    "DCC_DebugInfoInExe",
+    warnings
+  );
+  if (debugInfoInExeEnabled) {
+    args.push("-V", "-VN");
   }
-  handled.add("dcc_debugdcus");
+  handled.add("dcc_debuginfoinexe");
 
   const mapFile = getExpanded(properties, "DCC_MapFile");
   if (mapFile && mapFile !== "0") {
@@ -197,6 +219,26 @@ function addValueSwitch(
   handled.add(propertyName.toLocaleLowerCase());
 }
 
+function addEnumDirective(
+  args: string[],
+  handled: Set<string>,
+  properties: PropertyBag,
+  propertyName: string,
+  mappings: Record<string, string>,
+  warnings: string[]
+): void {
+  const value = getExpanded(properties, propertyName);
+  if (value) {
+    const directive = mappings[value];
+    if (directive) {
+      args.push(directive);
+    } else {
+      warnings.push(`Unsupported ${propertyName} value: ${value}`);
+    }
+  }
+  handled.add(propertyName.toLocaleLowerCase());
+}
+
 function getExpanded(properties: PropertyBag, propertyName: string): string | undefined {
   const value = properties.get(propertyName);
   return value === undefined ? undefined : expandProperties(value, properties).value.trim();
@@ -215,8 +257,8 @@ function resolveSinglePath(value: string, baseDirectory: string): string {
   return path.isAbsolute(unquoted) ? path.normalize(unquoted) : path.resolve(baseDirectory, unquoted);
 }
 
-function mergePathLists(first: string | undefined, second: string | undefined): string {
-  const entries = [first, second]
+function mergePathLists(...values: Array<string | undefined>): string {
+  const entries = values
     .filter((value): value is string => Boolean(value))
     .flatMap((value) => value.split(";"))
     .map((entry) => entry.trim())
@@ -241,4 +283,19 @@ function parseBoolean(value: string): boolean | undefined {
     return false;
   }
   return undefined;
+}
+
+function parseOptionalBoolean(
+  value: string | undefined,
+  propertyName: string,
+  warnings: string[]
+): boolean | undefined {
+  if (value === undefined || value === "") {
+    return undefined;
+  }
+  const enabled = parseBoolean(value);
+  if (enabled === undefined) {
+    warnings.push(`Unsupported boolean value for ${propertyName}: ${value}`);
+  }
+  return enabled;
 }

@@ -25,7 +25,7 @@ describe("buildDccArguments", () => {
       DCC_IncludePath: "headers",
       DCC_ExeOutput: ".\\bin\\Debug",
       DCC_DcuOutput: ".\\dcu\\Debug",
-      DCC_Optimization: "false",
+      DCC_Optimize: "false",
       DCC_Align: "8"
     }), {
       rebuild: true,
@@ -35,6 +35,7 @@ describe("buildDccArguments", () => {
 
     const base = path.dirname(projectFile);
     expect(result.arguments).toEqual([
+      "--no-config",
       "-DBASE;DEBUG",
       `-U${path.resolve(base, "src")};${path.resolve(base, "common")};${path.resolve(base, "library")}`,
       `-I${path.resolve(base, "headers")};${path.resolve(base, "src")};${path.resolve(base, "common")};${path.resolve(base, "library")}`,
@@ -47,6 +48,80 @@ describe("buildDccArguments", () => {
       "Sample.dpr"
     ]);
     expect(result.warnings).toEqual([]);
+  });
+
+  it("adds Debug DCU paths without enabling debug information in the executable", () => {
+    const result = buildDccArguments(evaluation({
+      DCC_DebugDCUs: "true",
+      DCC_TranslatedDebugLibraryPath: "translated-debug",
+      DCC_TranslatedLibraryPath: "translated-release",
+      DCC_UnitSearchPath: "project-units"
+    }), {
+      debugDcuPath: "debug-dcus",
+      libraryPath: "library"
+    });
+
+    const base = path.dirname(projectFile);
+    expect(result.arguments[0]).toBe("--no-config");
+    expect(result.arguments).toContain(
+      `-U${path.resolve(base, "translated-debug")};${path.resolve(base, "debug-dcus")};${path.resolve(base, "translated-release")};${path.resolve(base, "project-units")};${path.resolve(base, "library")}`
+    );
+    expect(result.arguments).not.toContain("-V");
+    expect(result.arguments).not.toContain("-V-");
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("maps XE7 debug information properties to their official arguments", () => {
+    const result = buildDccArguments(evaluation({
+      DCC_DebugInformation: "2",
+      DCC_SymbolReferenceInfo: "1",
+      DCC_DebugInfoInExe: "true"
+    }));
+
+    expect(result.arguments).toEqual([
+      "--no-config",
+      "-$D2",
+      "-$YD",
+      "-V",
+      "-VN",
+      "Sample.dpr"
+    ]);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("does not emit executable debug switches when DCC_DebugInfoInExe is false", () => {
+    const result = buildDccArguments(evaluation({ DCC_DebugInfoInExe: "false" }));
+    expect(result.arguments).not.toContain("-V");
+    expect(result.arguments).not.toContain("-VN");
+    expect(result.warnings).toEqual([]);
+  });
+
+  it.each([
+    ["true", "-$O+"],
+    ["false", "-$O-"]
+  ])("maps DCC_Optimize=%s to %s", (value, expected) => {
+    const result = buildDccArguments(evaluation({ DCC_Optimize: value }));
+    expect(result.arguments).toContain(expected);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("warns about unsupported XE7 enum and boolean values", () => {
+    const result = buildDccArguments(evaluation({
+      DCC_DebugDCUs: "maybe",
+      DCC_DebugInfoInExe: "sometimes",
+      DCC_DebugInformation: "9",
+      DCC_SymbolReferenceInfo: "3",
+      DCC_Optimize: "fast"
+    }));
+
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      "Unsupported boolean value for DCC_DebugDCUs: maybe",
+      "Unsupported boolean value for DCC_DebugInfoInExe: sometimes",
+      "Unsupported DCC_DebugInformation value: 9",
+      "Unsupported DCC_SymbolReferenceInfo value: 3",
+      "Unsupported boolean value for DCC_Optimize: fast"
+    ]));
+    expect(result.warnings).toHaveLength(5);
   });
 
   it("warns when a DCC property has no mapping", () => {

@@ -1,4 +1,3 @@
-import { access } from "node:fs/promises";
 import path from "node:path";
 import { BuildPlan, DprojEvaluation } from "../core/types";
 import { resolveBdsEnvironment } from "../environment/bdsLocator";
@@ -36,9 +35,9 @@ export async function createBuildPlan(options: CreateBuildPlanOptions): Promise<
   const dcc = buildDccArguments(evaluation, {
     rebuild: options.rebuild,
     libraryPath: bds.libraryPath,
+    debugDcuPath: bds.debugDcuPath,
     additionalArguments: options.additionalArguments
   });
-  const configWarnings = await detectCompilerConfigs(bds.compilerPath, evaluation);
 
   return {
     projectFile,
@@ -53,30 +52,9 @@ export async function createBuildPlan(options: CreateBuildPlanOptions): Promise<
     warnings: [...new Set([
       ...bds.warnings,
       ...evaluation.warnings,
-      ...dcc.warnings,
-      ...configWarnings
+      ...dcc.warnings
     ])]
   };
-}
-
-async function detectCompilerConfigs(
-  compilerPath: string,
-  evaluation: DprojEvaluation
-): Promise<string[]> {
-  const projectDirectory = path.dirname(evaluation.projectFile);
-  const candidates = [
-    path.join(path.dirname(compilerPath), "dcc32.cfg"),
-    path.join(projectDirectory, "dcc32.cfg"),
-    path.join(projectDirectory, `${path.basename(evaluation.projectFile, path.extname(evaluation.projectFile))}.cfg`),
-    path.join(projectDirectory, `${path.basename(evaluation.mainSource, path.extname(evaluation.mainSource))}.cfg`)
-  ];
-  const warnings: string[] = [];
-  for (const candidate of [...new Set(candidates.map(path.normalize))]) {
-    if (await exists(candidate)) {
-      warnings.push(`DCC32 may load implicit compiler arguments from: ${candidate}`);
-    }
-  }
-  return warnings;
 }
 
 function locateExpectedArtifacts(evaluation: DprojEvaluation): string[] {
@@ -109,15 +87,6 @@ function resolveOutputDirectory(value: string | undefined, projectDirectory: str
     return projectDirectory;
   }
   return path.isAbsolute(value) ? path.normalize(value) : path.resolve(projectDirectory, value);
-}
-
-async function exists(file: string): Promise<boolean> {
-  try {
-    await access(file);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 export function redactBuildPlan(plan: BuildPlan): BuildPlan {
