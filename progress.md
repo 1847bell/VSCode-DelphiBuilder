@@ -211,7 +211,7 @@
 ## 会话：2026-08-03（Delphi XE7 品牌与 Win64 构建支持）
 
 ### 阶段 10：需求确认与实现准备
-- **状态：** in_progress
+- **状态：** complete
 - 用户要求品牌改为 `Delphi XE7 DCC Builder`，增加 DCC64 路径，并仅在该路径已配置时显示 Win64 右键构建入口。
 - 工作区跟踪文件干净，本地 `main` 与远程一致；未跟踪用户样本 `Untitled-1.json` 保持不修改、不打包、不提交。
 - 实现边界：DCC32 继续必填且现有 Build 命令保持 Win32；DCC64 为可选设置，新增独立 Win64 构建命令并按 Win64 dproj/注册表环境求值。
@@ -236,3 +236,17 @@
 |--------|------|---------|---------|
 | 2026-08-03 | 读取不存在的 `test/integration/fixtures/Sample.dproj` | 1 | 确认集成测试复用 `test/fixtures/Sample.dproj`，后续只修改和读取该 fixture |
 | 2026-08-03 | 首次 DCC64 集成测试发现 Win64 Search Path 中 `$(BDSUSERDIR)` 未展开 | 1 | 保留失败断言，查询 XE7 实际环境来源后补齐 BDSUSERDIR 求值 |
+
+## 会话：2026-08-03（0.2.3 发布）
+
+### 阶段 11：版本与发布准备
+- **状态：** in_progress
+- 用户要求版本增加 0.0.1，当前 0.2.2 将提升为 0.2.3，随后打包、提交并推送。
+- 工作区跟踪文件干净，本地 main 与远程一致；`Untitled-1.json` 继续保持未修改、未打包、未提交。
+- 本轮仅更新版本、当前版本文档和发布记录，不修改已验证的 Win32/Win64 构建逻辑。
+- 已使用 npm 标准版本命令将 package.json 与 package-lock.json 同步提升到 0.2.3，未创建 Git tag。
+- 已更新 Changelog 的 0.2.3 发布段和中文 README 的当前版本、安装命令及 VSIX 文件名；0.2.2 资源路径历史说明保持不变。
+- 0.2.3 完整验证通过：TypeScript 检查、36/36 常规测试、3/3 真实 XE7 集成测试、esbuild 和 VSIX 打包。
+- 最终 VSIX 为 `delphi-xe7-dcc-builder-0.2.3.vsix`，大小 600196 字节；内容包含图标和中英文 README，不含 `Untitled-1.json`。
+- VSIX SHA-256：`3FB37B8C33C66F0BC65E18B0CB1D4FB930D4C76110771607F689586E23A88367`。
+- 最终版本一致性、VSIX 清单、差异范围和 `git diff --check` 均通过。

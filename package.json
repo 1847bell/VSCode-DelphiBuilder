@@ -2,7 +2,7 @@
   "name": "delphi-xe7-dcc-builder",
   "displayName": "Delphi XE7 DCC Builder",
   "description": "Build Delphi XE7 Win32 and Win64 projects with DCC32 and DCC64 from Visual Studio Code.",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "icon": "images/icon.png",
   "publisher": "local",
   "engines": {

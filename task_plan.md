@@ -4,7 +4,7 @@
 交付一个可打包的 VS Code 扩展首版，能够从 `.dproj` 生成可审查的 BuildPlan，并通过 DCC32 执行 Build/Rebuild、取消构建和发布诊断。
 
 ## 当前阶段
-阶段 10：Delphi XE7 品牌与 Win64 构建支持（进行中）
+阶段 11：0.2.3 发布（进行中）
 
 ## 各阶段
 
@@ -82,6 +82,13 @@
 - [x] 更新中英文文档与变更日志，保持版本 0.2.2
 - [x] 执行类型检查、测试、打包和 VSIX 内容验证
 - [x] 审查差异并提交同步远程仓库
+- **状态：** complete
+
+### 阶段 11：0.2.3 发布
+- [x] 将 package.json 与 package-lock.json 版本提升到 0.2.3
+- [x] 更新 Changelog 和 README 当前版本/VSIX 文件名
+- [x] 执行完整检查、测试、打包和 VSIX 内容校验
+- [x] 审查差异，提交并推送 main
 - **状态：** complete
 
 ## 关键问题

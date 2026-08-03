@@ -2,7 +2,7 @@
 
 通过 Visual Studio Code 直接调用 `DCC32.exe` 或 `DCC64.exe`，编译 Delphi XE7 Win32、Win64 项目。
 
-当前版本：`0.2.2`
+当前版本：`0.2.3`
 
 ## 功能
 
@@ -23,10 +23,10 @@
 使用 VS Code 命令行安装打包好的 VSIX：
 
 ```powershell
-code --install-extension "D:\OthCode\DelphiBuilder\delphi-xe7-dcc-builder-0.2.2.vsix"
+code --install-extension "D:\OthCode\DelphiBuilder\delphi-xe7-dcc-builder-0.2.3.vsix"
 ```
 
-也可以在 VS Code 扩展视图右上角菜单中选择“从 VSIX 安装...”，然后选择 `delphi-xe7-dcc-builder-0.2.2.vsix`。
+也可以在 VS Code 扩展视图右上角菜单中选择“从 VSIX 安装...”，然后选择 `delphi-xe7-dcc-builder-0.2.3.vsix`。
 
 安装或更新后，建议重新加载 VS Code 窗口。
 
@@ -271,7 +271,7 @@ npm run package
 
 ## 验证状态
 
-版本 `0.2.2` 当前已通过：
+版本 `0.2.3` 当前已通过：
 
 - 36 项常规测试
 - 3 项真实 Delphi XE7 集成测试（包括 DCC64 Win64 编译）
