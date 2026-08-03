@@ -1,7 +1,7 @@
 {
-  "name": "delphi-xe7-build",
-  "displayName": "Delphi XE7 Build",
-  "description": "Build Delphi XE7 Win32 projects with DCC32 from Visual Studio Code.",
+  "name": "delphi-dcc-builder",
+  "displayName": "Delphi DCC Builder",
+  "description": "Build Delphi Win32 projects with DCC32 from Visual Studio Code.",
   "version": "0.2.2",
   "icon": "images/icon.png",
   "publisher": "local",
@@ -28,22 +28,22 @@
     "commands": [
       {
         "command": "delphiXe7.buildProject",
-        "title": "Delphi XE7: Build Project...",
+        "title": "Delphi DCC Builder: Build Project...",
         "icon": "$(tools)"
       },
       {
         "command": "delphiXe7.rebuildProject",
-        "title": "Delphi XE7: Rebuild Project",
+        "title": "Delphi DCC Builder: Rebuild Project",
         "icon": "$(sync)"
       },
       {
         "command": "delphiXe7.cancelBuild",
-        "title": "Delphi XE7: Cancel Build",
+        "title": "Delphi DCC Builder: Cancel Build",
         "icon": "$(debug-stop)"
       },
       {
         "command": "delphiXe7.showBuildPlan",
-        "title": "Delphi XE7: Show Build Plan",
+        "title": "Delphi DCC Builder: Show Build Plan",
         "icon": "$(list-tree)"
       }
     ],
@@ -62,7 +62,7 @@
       ]
     },
     "configuration": {
-      "title": "Delphi XE7 Build",
+      "title": "Delphi DCC Builder",
       "properties": {
         "delphiXe7.compilerPath": {
           "type": "string",

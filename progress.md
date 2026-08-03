@@ -191,3 +191,19 @@
 | 时间戳 | 错误 | 尝试次数 | 解决方案 |
 |--------|------|---------|---------|
 | 2026-08-03 | 新增资源路径回归测试失败，实际参数没有 `-R` | 1 | 作为根因复现保留测试，按 XE7 Targets 实现完整 ResourcePath 合并 |
+
+## 会话：2026-08-03（品牌重命名）
+
+### 阶段 9：名称范围确认
+- **状态：** complete
+- 用户要求将插件名称改为 `Delphi DCC Builder`。
+- 会话恢复和 `git diff --stat` 已完成；本地 `main` 与远程一致，`Untitled-1.json` 继续保持未跟踪。
+- 决定统一包名、显示名、命令标题、设置标题、Output Channel、状态栏和 README 标题，同时保留 `delphiXe7.*` 内部标识兼容性。
+- 本轮保持版本号 0.2.2。
+- 已完成旧名称盘点；内部命令与设置键保留，技术范围和历史记录中的 XE7 描述保留。
+- 已将 package/display name、命令标题、设置标题、Output Channel、错误前缀、状态栏、构建摘要和 README 统一为新品牌。
+- 已新增 manifest 品牌与稳定命令 ID 回归测试；定向测试 3/3 和 TypeScript 严格检查通过。
+- 静态残留检查通过，package.json 与 lockfile 版本仍为 0.2.2。
+- 完整验证通过：TypeScript 严格检查、34/34 项常规测试、esbuild 和 VSIX 打包。
+- 最终 VSIX 为 `delphi-dcc-builder-0.2.2.vsix`，包内包含图标和中英文 README，不包含用户样本。
+- VSIX SHA-256：`602A21A04BCF12821414E46E8FE5C3CEB75D768E83C9D5353A39DCE280F4B396`。

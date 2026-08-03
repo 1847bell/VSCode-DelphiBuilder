@@ -1,4 +1,4 @@
-# Delphi XE7 Build
+# Delphi DCC Builder
 
 通过 Visual Studio Code 直接调用 `DCC32.exe`，编译 Delphi XE7 Win32 项目。
 
@@ -23,10 +23,10 @@
 使用 VS Code 命令行安装打包好的 VSIX：
 
 ```powershell
-code --install-extension "D:\OthCode\DelphiBuilder\delphi-xe7-build-0.2.2.vsix"
+code --install-extension "D:\OthCode\DelphiBuilder\delphi-dcc-builder-0.2.2.vsix"
 ```
 
-也可以在 VS Code 扩展视图右上角菜单中选择“从 VSIX 安装...”，然后选择 `delphi-xe7-build-0.2.2.vsix`。
+也可以在 VS Code 扩展视图右上角菜单中选择“从 VSIX 安装...”，然后选择 `delphi-dcc-builder-0.2.2.vsix`。
 
 安装或更新后，建议重新加载 VS Code 窗口。
 
@@ -36,23 +36,23 @@ code --install-extension "D:\OthCode\DelphiBuilder\delphi-xe7-build-0.2.2.vsix"
 
 | 命令 | 说明 |
 |------|------|
-| `Delphi XE7: Build Project...` | 读取项目配置，选择后增量编译当前项目 |
-| `Delphi XE7: Rebuild Project` | 添加 `-B`，重新编译项目及其依赖单元 |
-| `Delphi XE7: Cancel Build` | 终止当前 DCC32 进程及其子进程 |
-| `Delphi XE7: Show Build Plan` | 查看最终编译器、环境、工作目录、参数和预期产物 |
+| `Delphi DCC Builder: Build Project...` | 读取项目配置，选择后增量编译当前项目 |
+| `Delphi DCC Builder: Rebuild Project` | 添加 `-B`，重新编译项目及其依赖单元 |
+| `Delphi DCC Builder: Cancel Build` | 终止当前 DCC32 进程及其子进程 |
+| `Delphi DCC Builder: Show Build Plan` | 查看最终编译器、环境、工作目录、参数和预期产物 |
 
 在资源管理器中右键 `.dproj` 文件，可以执行 `Build Project...`。如果项目包含多个配置，随后弹出的选择列表会显示 `Build Project Debug`、`Build Project Release` 等选项；只有一个配置时直接使用该配置。
 
 Rebuild 仍可从命令面板执行，但不占用右键菜单。Show Build Plan 始终可从命令面板执行；右键菜单入口由 `delphiXe7.showBuildPlanMenu` 控制，默认隐藏。
 
-状态栏中的 `Delphi XE7` 按钮用于启动编译；编译期间按钮会变为运行状态，单击可取消编译。
+状态栏中的 `DCC Builder` 按钮用于启动编译；编译期间按钮会变为运行状态，单击可取消编译。
 
 ## 推荐使用流程
 
 1. 使用 VS Code 打开包含 `.dproj` 的工作区。
 2. 将工作区标记为 Trusted Workspace。执行编译时必须信任工作区。
 3. 显式设置 `delphiXe7.compilerPath`；为空时构建会直接报错。
-4. 首次使用可从命令面板执行 `Delphi XE7: Show Build Plan`。
+4. 首次使用可从命令面板执行 `Delphi DCC Builder: Show Build Plan`。
 5. 检查 `compilerPath`、`workingDirectory`、配置、平台、搜索路径和输出目录。
 6. 确认 Build Plan 中没有未解析宏或关键警告。
 7. 右键 `.dproj` 执行 Build，并选择项目实际声明的配置。
@@ -226,7 +226,7 @@ HKLM\Software\Embarcadero\BDS\15.0
 
 ### 编译失败但 Problems 面板为空
 
-完整原始输出始终保留在 `Delphi XE7 Build` Output Channel 中。没有文件名和行号的全局错误无法发布为可跳转诊断，但仍会显示在输出面板和失败通知中。
+完整原始输出始终保留在 `Delphi DCC Builder` Output Channel 中。没有文件名和行号的全局错误无法发布为可跳转诊断，但仍会显示在输出面板和失败通知中。
 
 ## 开发
 

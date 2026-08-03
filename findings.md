@@ -43,6 +43,11 @@
 - 用户提供的 0.2.0 Build Plan 参数包含完整 `-U/-I`，但没有任何 `-R`；本机 `dcc32.cfg` 也只有 Unit Alias 和 `-U`，所以不能依赖恢复 cfg 解决资源查找，必须显式生成 `-R`。
 - 本机 XE7 的 `lib\\win32\\release` 实际包含 `midas.res`、`CategoryButtons.res` 和 FireDAC VCLUI `.dfm` 等资源，证明将全局 Delphi Library Path 纳入 `-R` 可直接解决同类错误。
 - 0.2.2 已按官方顺序生成显式 `-R`，同时保留 `--no-config`；无需在“构建可复现”和“资源可找到”之间二选一。
+- 品牌旧名称同时存在于 manifest、运行时 Output/状态栏/错误提示、README 和构建日志；仅修改 `displayName` 会留下明显不一致。
+- `delphiXe7.*` 是已经写入用户 settings 和其他扩展调用示例的稳定标识，品牌重命名不应顺带破坏这些 API。
+- 需要修改的用户可见位置包括 package/display name、4 个命令标题、设置页标题、Output Channel、错误前缀、状态栏、Build Plan 输出标题、中英文 README 和 watch 日志。
+- `CHANGELOG`、支持范围、集成测试名称中的 Delphi XE7 是技术事实或历史记录，不属于需要消除的品牌旧名称。
+- 排除规划/历史记录后，公开清单、源码和 README 中不再残留 `Delphi XE7 Build`、`Delphi XE7:` 或 `delphi-xe7-build` 品牌字符串。
 
 ## 技术决策
 | 决策 | 理由 |

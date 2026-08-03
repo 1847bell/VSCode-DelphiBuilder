@@ -22,8 +22,8 @@ export class BuildCommands implements vscode.Disposable {
   private readonly statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
 
   public constructor(private readonly output: vscode.OutputChannel) {
-    this.statusBar.text = "$(tools) Delphi XE7";
-    this.statusBar.tooltip = "Build a Delphi XE7 project";
+    this.statusBar.text = "$(tools) DCC Builder";
+    this.statusBar.tooltip = "Build a Delphi project with DCC32";
     this.statusBar.command = "delphiXe7.buildProject";
     this.statusBar.show();
   }
@@ -248,7 +248,7 @@ export class BuildCommands implements vscode.Disposable {
 
   private writePlanSummary(plan: BuildPlan, rebuild: boolean): void {
     this.output.appendLine("");
-    this.output.appendLine(`=== Delphi XE7 ${rebuild ? "Rebuild" : "Build"}: ${path.basename(plan.projectFile)} ===`);
+    this.output.appendLine(`=== Delphi DCC Builder ${rebuild ? "Rebuild" : "Build"}: ${path.basename(plan.projectFile)} ===`);
     this.output.appendLine(`Configuration: ${plan.configuration}|${plan.platform}`);
     this.output.appendLine(`Working directory: ${plan.workingDirectory}`);
     this.output.appendLine(`Compiler: ${plan.compilerPath}`);
@@ -261,12 +261,12 @@ export class BuildCommands implements vscode.Disposable {
 
   private updateStatusBar(): void {
     if (this.runners.size > 0) {
-      this.statusBar.text = "$(sync~spin) Delphi XE7";
+      this.statusBar.text = "$(sync~spin) DCC Builder";
       this.statusBar.tooltip = `${this.runners.size} Delphi build${this.runners.size === 1 ? "" : "s"} running`;
       this.statusBar.command = "delphiXe7.cancelBuild";
     } else {
-      this.statusBar.text = "$(tools) Delphi XE7";
-      this.statusBar.tooltip = "Build a Delphi XE7 project";
+      this.statusBar.text = "$(tools) DCC Builder";
+      this.statusBar.tooltip = "Build a Delphi project with DCC32";
       this.statusBar.command = "delphiXe7.buildProject";
     }
   }

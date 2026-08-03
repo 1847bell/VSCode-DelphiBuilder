@@ -1,4 +1,4 @@
-# Delphi XE7 Build
+# Delphi DCC Builder
 
 Build Delphi XE7 Win32 projects from Visual Studio Code by invoking `DCC32.exe` directly.
 
@@ -6,10 +6,10 @@ Version `0.2.2` mirrors the XE7 ResourcePath construction and explicitly passes 
 
 ## Commands
 
-- `Delphi XE7: Build Project...`
-- `Delphi XE7: Rebuild Project`
-- `Delphi XE7: Cancel Build`
-- `Delphi XE7: Show Build Plan`
+- `Delphi DCC Builder: Build Project...`
+- `Delphi DCC Builder: Rebuild Project`
+- `Delphi DCC Builder: Cancel Build`
+- `Delphi DCC Builder: Show Build Plan`
 
 `delphiXe7.compilerPath` is required. Right-click a `.dproj` and select **Build Project...**; the extension reads the project and prompts for one of its declared configurations. Rebuild remains available from the Command Palette. **Show Build Plan** is always available from the Command Palette and can be enabled in the Explorer context menu with `delphiXe7.showBuildPlanMenu`.
 
