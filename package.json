@@ -3,6 +3,7 @@
   "displayName": "Delphi XE7 Build",
   "description": "Build Delphi XE7 Win32 projects with DCC32 from Visual Studio Code.",
   "version": "0.2.2",
+  "icon": "images/icon.png",
   "publisher": "local",
   "engines": {
     "vscode": "^1.85.0"
