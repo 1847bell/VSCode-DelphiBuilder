@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { XMLParser } from "fast-xml-parser";
-import { DprojEvaluation, ProjectConfiguration } from "../core/types";
+import { DelphiPlatform, DprojEvaluation, ProjectConfiguration } from "../core/types";
 import { ConditionSyntaxError, evaluateCondition } from "./conditionEvaluator";
 import { expandMsBuildProperties, expandProperties, PropertyBag } from "./propertyResolver";
 
@@ -9,7 +9,7 @@ type OrderedNode = Record<string, unknown>;
 
 export interface EvaluateDprojOptions {
   configuration?: string;
-  platform?: "Win32";
+  platform?: DelphiPlatform;
   initialProperties?: Record<string, string | undefined>;
 }
 
@@ -55,7 +55,7 @@ export function evaluateDproj(
       const project = getAttribute(node, "Project") ?? "(unknown)";
       warnings.push(`MSBuild import is not executed: ${project}`);
     } else if (name === "Target") {
-      warnings.push("MSBuild Target elements are not executed by direct DCC32 builds.");
+      warnings.push("MSBuild Target elements are not executed by direct DCC builds.");
     }
   }
 
@@ -139,7 +139,7 @@ function seedConfigurationProperties(
   properties: PropertyBag,
   configurations: ProjectConfiguration[],
   configurationName: string,
-  platform: "Win32"
+  platform: DelphiPlatform
 ): void {
   properties.set("Config", configurationName);
   properties.set("Configuration", configurationName);

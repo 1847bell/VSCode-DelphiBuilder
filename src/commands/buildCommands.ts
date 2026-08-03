@@ -6,7 +6,7 @@ import { createBuildPlan, redactBuildPlan } from "../compiler/buildPlan";
 import { CompilerRunner } from "../compiler/compilerRunner";
 import { parseCompilerDiagnostics } from "../compiler/diagnosticParser";
 import { OutputEncodingSetting, resolveOutputEncoding } from "../compiler/outputEncoding";
-import { BuildPlan } from "../core/types";
+import { BuildPlan, DelphiPlatform } from "../core/types";
 import { discoverConfigurations } from "../project/dprojParser";
 import { DiagnosticPublisher } from "../vscode/diagnosticPublisher";
 
@@ -22,29 +22,38 @@ export class BuildCommands implements vscode.Disposable {
   private readonly statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
 
   public constructor(private readonly output: vscode.OutputChannel) {
-    this.statusBar.text = "$(tools) DCC Builder";
-    this.statusBar.tooltip = "Build a Delphi project with DCC32";
+    this.statusBar.text = "$(tools) XE7 DCC Builder";
+    this.statusBar.tooltip = "Build a Delphi XE7 Win32 project";
     this.statusBar.command = "delphiXe7.buildProject";
     this.statusBar.show();
   }
 
-  public async build(argument: unknown, rebuild: boolean): Promise<void> {
+  public async build(
+    argument: unknown,
+    rebuild: boolean,
+    forcedPlatform?: DelphiPlatform
+  ): Promise<void> {
     if (!vscode.workspace.isTrusted) {
       throw new Error("Building requires a Trusted Workspace.");
     }
 
     const commandOptions = parseCommandOptions(argument);
-    assertWin32(commandOptions.platform);
+    const platform = forcedPlatform ?? resolvePlatform(commandOptions.platform);
     const projectFile = await this.resolveProject(argument, commandOptions);
     const projectKey = normalizeProjectKey(projectFile);
     if (this.runners.has(projectKey)) {
       throw new Error(`A build is already running for ${path.basename(projectFile)}.`);
     }
 
-    const compilerPath = this.resolveCompilerPath(projectFile);
-    const action = rebuild ? "Rebuild Project" : "Build Project";
-    const configuration = await this.resolveConfiguration(projectFile, commandOptions.configuration, action);
-    const plan = await this.makePlan(projectFile, configuration, rebuild, compilerPath);
+    const compilerPath = this.resolveCompilerPath(projectFile, platform);
+    const action = `${rebuild ? "Rebuild" : "Build"} Project ${platform}`;
+    const configuration = await this.resolveConfiguration(
+      projectFile,
+      commandOptions.configuration,
+      action,
+      platform
+    );
+    const plan = await this.makePlan(projectFile, configuration, rebuild, compilerPath, platform);
     this.diagnostics.clear(projectFile);
     this.writePlanSummary(plan, rebuild);
     this.output.show(true);
@@ -108,15 +117,16 @@ export class BuildCommands implements vscode.Disposable {
 
   public async showBuildPlan(argument: unknown): Promise<void> {
     const commandOptions = parseCommandOptions(argument);
-    assertWin32(commandOptions.platform);
+    const platform = resolvePlatform(commandOptions.platform);
     const projectFile = await this.resolveProject(argument, commandOptions);
-    const compilerPath = this.resolveCompilerPath(projectFile);
+    const compilerPath = this.resolveCompilerPath(projectFile, platform);
     const configuration = await this.resolveConfiguration(
       projectFile,
       commandOptions.configuration,
-      "Show Build Plan"
+      "Show Build Plan",
+      platform
     );
-    const plan = await this.makePlan(projectFile, configuration, false, compilerPath);
+    const plan = await this.makePlan(projectFile, configuration, false, compilerPath, platform);
     const document = await vscode.workspace.openTextDocument({
       language: "json",
       content: JSON.stringify(redactBuildPlan(plan), null, 2)
@@ -152,13 +162,15 @@ export class BuildCommands implements vscode.Disposable {
     projectFile: string,
     configuration: string,
     rebuild: boolean,
-    compilerPath: string
+    compilerPath: string,
+    platform: DelphiPlatform
   ): Promise<BuildPlan> {
     const resource = vscode.Uri.file(projectFile);
     const settings = vscode.workspace.getConfiguration("delphiXe7", resource);
     return createBuildPlan({
       projectFile,
       configuration,
+      platform,
       rebuild,
       compilerPath,
       additionalArguments: settings.get<string[]>("additionalArguments", []),
@@ -207,7 +219,8 @@ export class BuildCommands implements vscode.Disposable {
   private async resolveConfiguration(
     projectFile: string,
     requested: string | undefined,
-    action: string
+    action: string,
+    platform: DelphiPlatform
   ): Promise<string> {
     if (requested) {
       return requested;
@@ -224,7 +237,7 @@ export class BuildCommands implements vscode.Disposable {
     const selected = await vscode.window.showQuickPick(
       configurations.map((item) => ({
         label: `${action} ${item.name}`,
-        description: `${item.name}|Win32`,
+        description: `${item.name}|${platform}`,
         configuration: item.name
       })),
       { placeHolder: `Select a configuration for ${path.basename(projectFile)}` }
@@ -235,20 +248,24 @@ export class BuildCommands implements vscode.Disposable {
     return selected.configuration;
   }
 
-  private resolveCompilerPath(projectFile: string): string {
+  private resolveCompilerPath(projectFile: string, platform: DelphiPlatform): string {
+    const settingName = platform === "Win64" ? "compiler64Path" : "compilerPath";
+    const compilerName = platform === "Win64" ? "DCC64" : "DCC32";
     const compilerPath = vscode.workspace
       .getConfiguration("delphiXe7", vscode.Uri.file(projectFile))
-      .get<string>("compilerPath", "")
+      .get<string>(settingName, "")
       .trim();
     if (!compilerPath) {
-      throw new Error("DCC32 compiler path is not configured. Set 'delphiXe7.compilerPath' before building.");
+      throw new Error(
+        `${compilerName} compiler path is not configured. Set 'delphiXe7.${settingName}' before building.`
+      );
     }
     return compilerPath;
   }
 
   private writePlanSummary(plan: BuildPlan, rebuild: boolean): void {
     this.output.appendLine("");
-    this.output.appendLine(`=== Delphi DCC Builder ${rebuild ? "Rebuild" : "Build"}: ${path.basename(plan.projectFile)} ===`);
+    this.output.appendLine(`=== Delphi XE7 DCC Builder ${rebuild ? "Rebuild" : "Build"}: ${path.basename(plan.projectFile)} ===`);
     this.output.appendLine(`Configuration: ${plan.configuration}|${plan.platform}`);
     this.output.appendLine(`Working directory: ${plan.workingDirectory}`);
     this.output.appendLine(`Compiler: ${plan.compilerPath}`);
@@ -261,12 +278,12 @@ export class BuildCommands implements vscode.Disposable {
 
   private updateStatusBar(): void {
     if (this.runners.size > 0) {
-      this.statusBar.text = "$(sync~spin) DCC Builder";
+      this.statusBar.text = "$(sync~spin) XE7 DCC Builder";
       this.statusBar.tooltip = `${this.runners.size} Delphi build${this.runners.size === 1 ? "" : "s"} running`;
       this.statusBar.command = "delphiXe7.cancelBuild";
     } else {
-      this.statusBar.text = "$(tools) DCC Builder";
-      this.statusBar.tooltip = "Build a Delphi project with DCC32";
+      this.statusBar.text = "$(tools) XE7 DCC Builder";
+      this.statusBar.tooltip = "Build a Delphi XE7 Win32 project";
       this.statusBar.command = "delphiXe7.buildProject";
     }
   }
@@ -305,10 +322,14 @@ function normalizeProjectKey(file: string): string {
   return path.normalize(file).toLocaleLowerCase();
 }
 
-function assertWin32(platform: string | undefined): void {
-  if (platform && platform.toLocaleLowerCase() !== "win32") {
-    throw new Error(`Only the Win32 platform is supported, received '${platform}'.`);
+function resolvePlatform(platform: string | undefined): DelphiPlatform {
+  if (!platform || platform.toLocaleLowerCase() === "win32") {
+    return "Win32";
   }
+  if (platform.toLocaleLowerCase() === "win64") {
+    return "Win64";
+  }
+  throw new Error(`Only the Win32 and Win64 platforms are supported, received '${platform}'.`);
 }
 
 function quoteForDisplay(argument: string): string {

@@ -42,6 +42,18 @@ describe("dprojParser", () => {
     expect(result.properties.DCC_DcuOutput).toBeUndefined();
   });
 
+  it("applies Win64 platform properties independently from Win32", () => {
+    const result = evaluateDproj(content, projectFile, {
+      configuration: "Debug",
+      platform: "Win64",
+      initialProperties: { DCC_UnitSearchPath: "common" }
+    });
+
+    expect(result.platform).toBe("Win64");
+    expect(result.properties.DCC_Define).toBe("BASE;DEBUG64");
+    expect(result.properties.DCC_DcuOutput).toBe(".\\dcu\\Win64\\Debug");
+  });
+
   it("rejects a configuration that the project does not define", () => {
     expect(() => evaluateDproj(content, projectFile, { configuration: "Staging" }))
       .toThrow("Configuration 'Staging' is not defined");

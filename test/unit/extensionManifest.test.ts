@@ -31,34 +31,38 @@ const manifest = JSON.parse(
 ) as ExtensionManifest;
 
 describe("extension manifest", () => {
-  it("uses the Delphi DCC Builder brand while preserving stable command identifiers", () => {
-    expect(manifest.name).toBe("delphi-dcc-builder");
-    expect(manifest.displayName).toBe("Delphi DCC Builder");
-    expect(manifest.contributes.configuration.title).toBe("Delphi DCC Builder");
+  it("uses the Delphi XE7 DCC Builder brand while preserving existing command identifiers", () => {
+    expect(manifest.name).toBe("delphi-xe7-dcc-builder");
+    expect(manifest.displayName).toBe("Delphi XE7 DCC Builder");
+    expect(manifest.contributes.configuration.title).toBe("Delphi XE7 DCC Builder");
     expect(manifest.contributes.commands.map((item) => item.command)).toEqual([
       "delphiXe7.buildProject",
+      "delphiXe7.buildProjectWin64",
       "delphiXe7.rebuildProject",
       "delphiXe7.cancelBuild",
       "delphiXe7.showBuildPlan"
     ]);
     expect(manifest.contributes.commands.every((item) =>
-      item.title.startsWith("Delphi DCC Builder:"))).toBe(true);
+      item.title.startsWith("Delphi XE7 DCC Builder:"))).toBe(true);
   });
 
-  it("requires an explicit compiler path and has no project or configuration defaults", () => {
+  it("requires DCC32 while keeping DCC64 optional", () => {
     const properties = manifest.contributes.configuration.properties;
     expect(properties).not.toHaveProperty("delphiXe7.defaultProject");
     expect(properties).not.toHaveProperty("delphiXe7.defaultConfiguration");
     expect(properties["delphiXe7.compilerPath"].default).toBe("");
+    expect(properties["delphiXe7.compiler64Path"].default).toBe("");
   });
 
-  it("keeps the context menu focused on Build and optionally Show Build Plan", () => {
+  it("shows Win64 in the context menu only when DCC64 is configured", () => {
     const menu = manifest.contributes.menus["explorer/context"];
     expect(menu.map((item) => item.command)).toEqual([
       "delphiXe7.buildProject",
+      "delphiXe7.buildProjectWin64",
       "delphiXe7.showBuildPlan"
     ]);
-    expect(menu[1].when).toContain("config.delphiXe7.showBuildPlanMenu == show");
+    expect(menu[1].when).toContain("config.delphiXe7.compiler64Path");
+    expect(menu[2].when).toContain("config.delphiXe7.showBuildPlanMenu == show");
     expect(manifest.contributes.configuration.properties["delphiXe7.showBuildPlanMenu"])
       .toMatchObject({ default: "hide", enum: ["hide", "show"] });
   });

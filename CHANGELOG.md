@@ -2,7 +2,9 @@
 
 ## 0.2.2
 
-- Rename the extension and its user-facing labels to Delphi DCC Builder while preserving existing command and setting identifiers.
+- Rename the extension and its user-facing labels to Delphi XE7 DCC Builder while preserving existing command and setting identifiers.
+- Add an optional DCC64 compiler path and a Win64 Explorer build command that is visible only when the path is configured.
+- Evaluate Win64 dproj conditions and read the BDS 15.0 Win64 Library and Debug DCU paths for DCC64 builds.
 - Match the Delphi XE7 ResourcePath construction and always emit an explicit `-R` argument.
 - Include translated resources, BRCC output, project unit/resource paths, and the BDS Win32 Library Path in resource lookup.
 - Fix missing VCL and FireDAC resources such as `Controls.res`, `midas.res`, and `FireDAC.VCLUI.Login.dfm` when `dcc32.cfg` is disabled.

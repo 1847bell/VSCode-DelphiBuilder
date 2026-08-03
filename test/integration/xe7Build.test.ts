@@ -42,6 +42,28 @@ describe("Delphi XE7 integration", () => {
       expect.objectContaining({ file: brokenSource, level: "error" })
     ]));
   });
+
+  it("builds the fixture with DCC64 and Win64 library paths", async () => {
+    const plan = await createBuildPlan({
+      projectFile: path.resolve("test/fixtures/Sample.dproj"),
+      configuration: "Debug",
+      platform: "Win64",
+      rebuild: true
+    });
+    expect(path.basename(plan.compilerPath).toLocaleLowerCase()).toBe("dcc64.exe");
+    expect(existsSync(plan.compilerPath), `DCC64.exe was not found: ${plan.compilerPath}`).toBe(true);
+    expect(plan.platform).toBe("Win64");
+    expect(plan.arguments.join(";")).not.toContain("$(");
+
+    const output: string[] = [];
+    const result = await new CompilerRunner().run(
+      plan,
+      await resolveOutputEncoding("system"),
+      (text) => output.push(text)
+    );
+    expect(result.exitCode, output.join("")).toBe(0);
+    expect(plan.expectedArtifacts.some(existsSync)).toBe(true);
+  });
 });
 
 async function createXe7Plan() {

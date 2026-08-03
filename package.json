@@ -1,7 +1,7 @@
 {
-  "name": "delphi-dcc-builder",
-  "displayName": "Delphi DCC Builder",
-  "description": "Build Delphi Win32 projects with DCC32 from Visual Studio Code.",
+  "name": "delphi-xe7-dcc-builder",
+  "displayName": "Delphi XE7 DCC Builder",
+  "description": "Build Delphi XE7 Win32 and Win64 projects with DCC32 and DCC64 from Visual Studio Code.",
   "version": "0.2.2",
   "icon": "images/icon.png",
   "publisher": "local",
@@ -15,11 +15,13 @@
   "keywords": [
     "delphi",
     "dcc32",
+    "dcc64",
     "xe7"
   ],
   "main": "./dist/extension.js",
   "activationEvents": [
     "onCommand:delphiXe7.buildProject",
+    "onCommand:delphiXe7.buildProjectWin64",
     "onCommand:delphiXe7.rebuildProject",
     "onCommand:delphiXe7.cancelBuild",
     "onCommand:delphiXe7.showBuildPlan"
@@ -28,22 +30,27 @@
     "commands": [
       {
         "command": "delphiXe7.buildProject",
-        "title": "Delphi DCC Builder: Build Project...",
+        "title": "Delphi XE7 DCC Builder: Build Project Win32...",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "delphiXe7.buildProjectWin64",
+        "title": "Delphi XE7 DCC Builder: Build Project Win64...",
         "icon": "$(tools)"
       },
       {
         "command": "delphiXe7.rebuildProject",
-        "title": "Delphi DCC Builder: Rebuild Project",
+        "title": "Delphi XE7 DCC Builder: Rebuild Project Win32",
         "icon": "$(sync)"
       },
       {
         "command": "delphiXe7.cancelBuild",
-        "title": "Delphi DCC Builder: Cancel Build",
+        "title": "Delphi XE7 DCC Builder: Cancel Build",
         "icon": "$(debug-stop)"
       },
       {
         "command": "delphiXe7.showBuildPlan",
-        "title": "Delphi DCC Builder: Show Build Plan",
+        "title": "Delphi XE7 DCC Builder: Show Build Plan",
         "icon": "$(list-tree)"
       }
     ],
@@ -55,20 +62,31 @@
           "group": "navigation@10"
         },
         {
+          "command": "delphiXe7.buildProjectWin64",
+          "when": "resourceExtname == .dproj && config.delphiXe7.compiler64Path",
+          "group": "navigation@11"
+        },
+        {
           "command": "delphiXe7.showBuildPlan",
           "when": "resourceExtname == .dproj && config.delphiXe7.showBuildPlanMenu == show",
-          "group": "navigation@11"
+          "group": "navigation@12"
         }
       ]
     },
     "configuration": {
-      "title": "Delphi DCC Builder",
+      "title": "Delphi XE7 DCC Builder",
       "properties": {
         "delphiXe7.compilerPath": {
           "type": "string",
           "default": "",
           "scope": "resource",
           "description": "Required absolute path to the Delphi XE7 DCC32.exe. Builds fail when this setting is empty."
+        },
+        "delphiXe7.compiler64Path": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "Optional absolute path to the Delphi XE7 DCC64.exe. The Win64 Explorer build command is shown when this setting is not empty."
         },
         "delphiXe7.showBuildPlanMenu": {
           "type": "string",
@@ -93,7 +111,7 @@
           ],
           "default": "system",
           "scope": "resource",
-          "description": "Encoding used to decode DCC32 output."
+          "description": "Encoding used to decode DCC32 or DCC64 output."
         },
         "delphiXe7.additionalArguments": {
           "type": "array",
@@ -102,7 +120,7 @@
           },
           "default": [],
           "scope": "resource",
-          "description": "Additional DCC32 arguments appended before the main source file."
+          "description": "Additional DCC arguments appended before the main source file."
         },
         "delphiXe7.environment": {
           "type": "object",
@@ -111,7 +129,7 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Environment variables applied to DCC32 after the XE7 registry environment."
+          "description": "Environment variables applied to DCC32 or DCC64 after the XE7 registry environment."
         }
       }
     }

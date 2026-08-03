@@ -21,7 +21,7 @@ export class CompilerRunner {
     if (this.child) {
       throw new Error("This compiler runner is already running.");
     }
-    await assertFileExists(plan.compilerPath, "DCC32.exe");
+    await assertFileExists(plan.compilerPath, path.basename(plan.compilerPath) || "Delphi compiler");
     await assertFileExists(plan.mainSource, "Main source");
     await prepareOutputDirectories(plan);
 

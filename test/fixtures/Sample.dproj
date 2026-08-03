@@ -14,9 +14,17 @@
     <DCC_Namespace>Winapi;System.Win;$(DCC_Namespace)</DCC_Namespace>
     <DCC_UsePackage>rtl;vcl;$(DCC_UsePackage)</DCC_UsePackage>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Base_Win64)'!=''">
+    <DCC_Namespace>Winapi;System.Win;$(DCC_Namespace)</DCC_Namespace>
+    <DCC_UsePackage>rtl;vcl;$(DCC_UsePackage)</DCC_UsePackage>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Cfg_1)'!='' and '$(Platform)'=='Win32'">
     <DCC_Define>$(DCC_Define);DEBUG</DCC_Define>
     <DCC_DcuOutput>.\dcu\Win32\Debug</DCC_DcuOutput>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Cfg_1)'!='' and '$(Platform)'=='Win64'">
+    <DCC_Define>$(DCC_Define);DEBUG64</DCC_Define>
+    <DCC_DcuOutput>.\dcu\Win64\Debug</DCC_DcuOutput>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Cfg_2)'!=''">
     <DCC_Define>$(DCC_Define);RELEASE</DCC_Define>

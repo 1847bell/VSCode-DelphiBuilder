@@ -4,10 +4,19 @@ import { parseRsVarsContent, resolveBdsEnvironment } from "../../src/environment
 
 vi.mock("../../src/environment/registryReader", () => ({
   queryRegistry: vi.fn(async (key: string) => {
+    if (key.endsWith("Explorer\\User Shell Folders")) {
+      return { Personal: "D:\\RedirectedDocuments" };
+    }
     if (key.endsWith("Library\\Win32") && key.startsWith("HKLM")) {
       return {
         "Search Path": "$(BDSLIB)\\win32\\release;%SDKROOT%\\units",
         "Debug DCU Path": "$(BDSLIB)\\win32\\debug;$(MISSING_DEBUG_PATH)"
+      };
+    }
+    if (key.endsWith("Library\\Win64") && key.startsWith("HKLM")) {
+      return {
+        "Search Path": "$(BDSLIB)\\win64\\release;%SDKROOT%\\units64",
+        "Debug DCU Path": "$(BDSLIB)\\win64\\debug"
       };
     }
     return {};
@@ -39,8 +48,23 @@ describe("parseRsVarsContent", () => {
     expect(result.debugDcuPath).toBe(
       `${path.join(root, "lib", "win32", "debug")};$(MISSING_DEBUG_PATH)`
     );
+    expect(result.variables.BDSUSERDIR).toBe(
+      path.join("D:\\RedirectedDocuments", "Embarcadero", "Studio", "15.0")
+    );
     expect(result.warnings).toContain(
       "Unresolved BDS Debug DCU Path property: $(MISSING_DEBUG_PATH)."
     );
+  });
+
+  it("uses the Win64 compiler and Win64 registry library paths", async () => {
+    const root = path.resolve("test/fixtures/fake-bds");
+    const compiler = path.join(root, "bin", "DCC64.exe");
+    const result = await resolveBdsEnvironment(compiler, { SDKROOT: "D:\\SDK" }, "Win64");
+
+    expect(result.compilerPath).toBe(compiler);
+    expect(result.libraryPath).toBe(
+      `${path.join(root, "lib", "win64", "release")};D:\\SDK\\units64`
+    );
+    expect(result.debugDcuPath).toBe(path.join(root, "lib", "win64", "debug"));
   });
 });

@@ -207,3 +207,32 @@
 - 完整验证通过：TypeScript 严格检查、34/34 项常规测试、esbuild 和 VSIX 打包。
 - 最终 VSIX 为 `delphi-dcc-builder-0.2.2.vsix`，包内包含图标和中英文 README，不包含用户样本。
 - VSIX SHA-256：`602A21A04BCF12821414E46E8FE5C3CEB75D768E83C9D5353A39DCE280F4B396`。
+
+## 会话：2026-08-03（Delphi XE7 品牌与 Win64 构建支持）
+
+### 阶段 10：需求确认与实现准备
+- **状态：** in_progress
+- 用户要求品牌改为 `Delphi XE7 DCC Builder`，增加 DCC64 路径，并仅在该路径已配置时显示 Win64 右键构建入口。
+- 工作区跟踪文件干净，本地 `main` 与远程一致；未跟踪用户样本 `Untitled-1.json` 保持不修改、不打包、不提交。
+- 实现边界：DCC32 继续必填且现有 Build 命令保持 Win32；DCC64 为可选设置，新增独立 Win64 构建命令并按 Win64 dproj/注册表环境求值。
+- 本轮保持版本号 0.2.2，验收包括清单条件、平台路径、类型检查、常规测试和 VSIX 打包。
+- 已定位全部主要 Win32 硬编码层；DCC 参数构造可复用，平台差异主要位于 dproj 属性条件、注册表 Library 节点和编译器路径选择。
+- 已新增 `DelphiPlatform` 并将 Win32/Win64 贯穿 dproj 求值、BuildPlan、BDS Library/Debug DCU 注册表读取及编译器选择。
+- 已注册 `delphiXe7.buildProjectWin64`，其资源管理器菜单使用 `config.delphiXe7.compiler64Path` 条件控制；空设置不显示，运行时仍会再次校验非空路径。
+- 已完成新品牌、package name、DCC64 设置和 Win64 命令清单修改，版本保持 0.2.2。
+- 定向验证通过：TypeScript 严格检查，以及清单、dproj、BDS 环境共 11/11 项测试。
+- 已更新中英文 README 和 Changelog，说明新品牌、DCC64 可选设置、Win64 菜单显隐、平台专用 Library Path 及命令 API。
+- 静态品牌与配置检查通过；package.json 可解析，包名为 `delphi-xe7-dcc-builder`，版本仍为 0.2.2，贡献 5 个命令。
+- 已确认本机 XE7 的 DCC64.exe 和 Win64 Library 注册表节点可用，准备执行真实 Win64 fixture 编译。
+- 已从 HKCU User Shell Folders 的 `Personal` 值派生 BDSUSERDIR，兼容重定向文档目录；对应单元断言已加入。
+- 修复后定向测试 11/11、TypeScript 检查通过；真实 XE7 集成测试 3/3 通过，其中新增 DCC64 Win64 成功编译。
+- 完整验证通过：36/36 常规测试、TypeScript 严格检查、esbuild 和 VSIX 打包；DCC64 产物 PE Machine 为 `0x8664`（x64）。
+- 已生成 `delphi-xe7-dcc-builder-0.2.2.vsix`，包内包含图标和中英文 README。
+- VSIX 内容检查确认不含用户样本 `Untitled-1.json`；文件大小 600180 字节，SHA-256 为 `A845479A5720EB8388E7938F24568FDE62CF032B5F46E8F69E1C7CA6C45D51A0`。
+- 最终静态残留检查和 `git diff --check` 通过，改动范围仅包含品牌、Win64 构建链路、测试、文档及规划记录。
+
+### 本轮错误日志
+| 时间戳 | 错误 | 尝试次数 | 解决方案 |
+|--------|------|---------|---------|
+| 2026-08-03 | 读取不存在的 `test/integration/fixtures/Sample.dproj` | 1 | 确认集成测试复用 `test/fixtures/Sample.dproj`，后续只修改和读取该 fixture |
+| 2026-08-03 | 首次 DCC64 集成测试发现 Win64 Search Path 中 `$(BDSUSERDIR)` 未展开 | 1 | 保留失败断言，查询 XE7 实际环境来源后补齐 BDSUSERDIR 求值 |

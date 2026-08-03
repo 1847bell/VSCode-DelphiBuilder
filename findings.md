@@ -48,6 +48,15 @@
 - 需要修改的用户可见位置包括 package/display name、4 个命令标题、设置页标题、Output Channel、错误前缀、状态栏、Build Plan 输出标题、中英文 README 和 watch 日志。
 - `CHANGELOG`、支持范围、集成测试名称中的 Delphi XE7 是技术事实或历史记录，不属于需要消除的品牌旧名称。
 - 排除规划/历史记录后，公开清单、源码和 README 中不再残留 `Delphi XE7 Build`、`Delphi XE7:` 或 `delphi-xe7-build` 品牌字符串。
+- 当前需求要求重新采用 `Delphi XE7 DCC Builder` 品牌，并在现有 Win32 工作流旁增加可选 Win64 工作流。
+- VS Code 静态菜单可使用 `config.delphiXe7.compiler64Path` 的字符串真值作为 `when` 条件，因此空路径时隐藏、非空时显示不需要运行时动态注册菜单。
+- DCC64 支持不能只替换可执行文件；BuildPlan、dproj 平台属性、BDS Library 注册表节点和公共 Platform 类型都必须按 Win64 传递。
+- 当前平台硬编码集中在 `BuildCommandOptions/assertWin32`、`CreateBuildPlanOptions/createBuildPlan`、`DprojEvaluation/BuildPlan`、`EvaluateDprojOptions/seedConfigurationProperties` 和 `resolveBdsEnvironment`；DCC 参数映射不依赖指令集，可直接复用平台化后的求值结果与库路径。
+- 最小实现应定义单一 `DelphiPlatform` 联合类型，将平台传给 BuildPlan 和 BDS 环境解析；Win32/Win64 命令共享同一个 `build` 方法，避免复制编译执行与诊断流程。
+- 本机 XE7 安装包含可执行的 `DCC64.exe`，HKCU/HKLM 都有 `BDS\15.0\Library\Win64`；其 Search Path 和 Debug DCU Path 与 Win32 独立，适合加入真实 DCC64 集成验证。
+- `rsvars.bat` 与 BDS Environment Variables 注册表均未定义 `BDSUSERDIR`，但 Win64 Library Search Path 引用了该宏；它需要按 IDE/MSBuild 的用户文档目录规则派生，不能从当前环境直接继承。
+- `BDSUSERDIR` 已按 HKCU User Shell Folders 的 `Personal` 路径派生为 `Personal\Embarcadero\Studio\15.0`，可正确处理本机文档目录重定向；DCC64 BuildPlan 不再残留该宏。
+- 本机真实 DCC64 已成功编译 Win64 fixture，证明平台化后的 dproj 条件、Library Path、Debug DCU Path 和参数链路可被 XE7 编译器接受。
 
 ## 技术决策
 | 决策 | 理由 |

@@ -4,7 +4,7 @@
 交付一个可打包的 VS Code 扩展首版，能够从 `.dproj` 生成可审查的 BuildPlan，并通过 DCC32 执行 Build/Rebuild、取消构建和发布诊断。
 
 ## 当前阶段
-阶段 9：Delphi DCC Builder 品牌重命名（进行中）
+阶段 10：Delphi XE7 品牌与 Win64 构建支持（进行中）
 
 ## 各阶段
 
@@ -74,6 +74,16 @@
 - [x] 审查差异、提交并同步远程仓库
 - **状态：** complete
 
+### 阶段 10：Delphi XE7 品牌与 Win64 构建支持
+- [x] 将包名和全部用户可见品牌改为 Delphi XE7 DCC Builder
+- [x] 增加可选 DCC64 路径配置和 Win64 平台构建链路
+- [x] 仅在 DCC64 路径非空时显示 Win64 右键构建命令
+- [x] 增加清单、平台、环境路径和参数回归测试
+- [x] 更新中英文文档与变更日志，保持版本 0.2.2
+- [x] 执行类型检查、测试、打包和 VSIX 内容验证
+- [x] 审查差异并提交同步远程仓库
+- **状态：** complete
+
 ## 关键问题
 1. 真实 XE7 `.dproj` 的属性覆盖和 DCC 参数需由脱敏样本与 IDE 命令行校准。
 2. 本地 Git 仓库已建立；`76ed7b4` 是 0.1.4 可还原基线。
@@ -89,6 +99,7 @@
 | DCC 参数以 XE7 自带 `dcctask.xml` 为准 | 避免把 `DCC_DebugDCUs` 错映射成 `-V`，导致 Release 产物携带调试信息 |
 | 禁用 `dcc32.cfg` 后显式生成完整 `-R` | 保证 Build Plan 与实际资源查找路径一致，避免 VCL/FireDAC 资源依赖隐式配置 |
 | 对外品牌重命名但保留 `delphiXe7.*` 标识 | 避免已有工作区设置、命令调用和菜单条件失效 |
+| DCC32 必填、DCC64 可选并使用独立 Win64 命令 | 保持现有 Win32 工作流兼容，同时让右键菜单可由空字符串配置静态控制 |
 
 ## 遇到的错误
 | 错误 | 尝试次数 | 解决方案 |
@@ -103,6 +114,8 @@
 | `git diff --stat` 提示不是 Git 仓库 | 1 | 用户已明确要求建立本地 Git 基线，下一步执行 `git init` |
 | planning skill 的 `check-complete.ps1` 编码损坏导致解析失败 | 1 | 改用同技能提供的 `check-complete.sh` 备用脚本 |
 | PowerShell PATH 中没有 `sh` | 1 | 已定位 `C:\Program Files\Git\bin\bash.exe`，改用绝对路径运行备用脚本 |
+| 误读不存在的集成测试 fixture 路径 | 1 | 确认真实集成测试复用 `test/fixtures/Sample.dproj`，不重复该路径 |
+| DCC64 集成测试发现 `$(BDSUSERDIR)` 未展开 | 1 | 查询 XE7 环境来源并在 BDS 环境层补齐，不移除集成断言 |
 
 ## 备注
 - 本轮不声称完整复现 MSBuild/Delphi IDE；先交付可运行、可校准的垂直切片。

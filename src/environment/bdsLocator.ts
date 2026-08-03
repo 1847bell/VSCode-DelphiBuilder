@@ -1,6 +1,8 @@
 import { access, readFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import iconv from "iconv-lite";
+import { DelphiPlatform } from "../core/types";
 import { expandProperties, PropertyBag } from "../project/propertyResolver";
 import { queryRegistry } from "./registryReader";
 
@@ -17,19 +19,21 @@ export interface BdsEnvironment {
 
 export async function resolveBdsEnvironment(
   compilerOverride: string | undefined,
-  environmentOverrides: Record<string, string> = {}
+  environmentOverrides: Record<string, string> = {},
+  platform: DelphiPlatform = "Win32"
 ): Promise<BdsEnvironment> {
   const warnings: string[] = [];
   const userRoot = await readRoot("HKCU");
   const machineRoot = await readRoot("HKLM");
   const registryRoot = userRoot || machineRoot;
   const fallbackRoot = defaultRootDirectory();
+  const compilerName = platform === "Win64" ? "DCC64.exe" : "DCC32.exe";
 
   const compilerPath = compilerOverride?.trim()
     ? path.resolve(compilerOverride.trim())
     : registryRoot
-      ? path.join(registryRoot, "bin", "DCC32.exe")
-      : path.join(fallbackRoot, "bin", "DCC32.exe");
+      ? path.join(registryRoot, "bin", compilerName)
+      : path.join(fallbackRoot, "bin", compilerName);
 
   const rootDir = (compilerOverride?.trim() ? inferRootFromCompiler(compilerPath) : undefined)
     || registryRoot
@@ -37,6 +41,7 @@ export async function resolveBdsEnvironment(
     || fallbackRoot;
 
   const rsVars = await readRsVars(rootDir);
+  const bdsUserDir = await readBdsUserDirectory();
 
   const registryVariables = {
     ...await queryRegistry(`HKLM\\${BDS_KEY}\\Environment Variables`),
@@ -47,6 +52,7 @@ export async function resolveBdsEnvironment(
     BDSBIN: path.join(rootDir, "bin"),
     BDSINCLUDE: path.join(rootDir, "include"),
     BDSLIB: path.join(rootDir, "lib"),
+    BDSUSERDIR: bdsUserDir,
     DELPHI: rootDir,
   };
   const variables = mergeVariables(
@@ -55,10 +61,10 @@ export async function resolveBdsEnvironment(
   );
 
   const libraryValues = {
-    ...await queryRegistry(`HKLM\\${BDS_KEY}\\Library\\Win32`),
-    ...await queryRegistry(`HKCU\\${BDS_KEY}\\Library\\Win32`)
+    ...await queryRegistry(`HKLM\\${BDS_KEY}\\Library\\${platform}`),
+    ...await queryRegistry(`HKCU\\${BDS_KEY}\\Library\\${platform}`)
   };
-  const libraryPropertyBag = new PropertyBag({ ...process.env, ...variables, Platform: "Win32" });
+  const libraryPropertyBag = new PropertyBag({ ...process.env, ...variables, Platform: platform });
   const expandedLibraryPath = expandBdsPath(libraryValues["Search Path"] ?? "", libraryPropertyBag);
   const expandedDebugDcuPath = expandBdsPath(
     libraryValues["Debug DCU Path"] ?? "",
@@ -71,10 +77,10 @@ export async function resolveBdsEnvironment(
     warnings.push("BDS 15.0 RootDir was not found in the 32-bit registry view; using the default XE7 path.");
   }
   if (!await exists(compilerPath)) {
-    warnings.push(`DCC32.exe was not found: ${compilerPath}`);
+    warnings.push(`${compilerName} was not found: ${compilerPath}`);
   }
   if (!libraryPath) {
-    warnings.push("The BDS 15.0 Win32 Library Search Path was not found in the registry.");
+    warnings.push(`The BDS 15.0 ${platform} Library Search Path was not found in the registry.`);
   }
   for (const name of expandedLibraryPath.unresolved) {
     warnings.push(`Unresolved BDS Library Path property: $(${name}).`);
@@ -98,6 +104,17 @@ function expandBdsPath(value: string, properties: PropertyBag): ReturnType<typeo
 async function readRoot(hive: "HKCU" | "HKLM"): Promise<string> {
   const values = await queryRegistry(`${hive}\\${BDS_KEY}`, "RootDir");
   return values.RootDir?.replace(/[\\/]+$/, "") ?? "";
+}
+
+async function readBdsUserDirectory(): Promise<string> {
+  const values = await queryRegistry(
+    "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders",
+    "Personal"
+  );
+  const documents = values.Personal?.trim()
+    ? expandPercentValue(values.Personal.trim(), new PropertyBag(process.env))
+    : path.join(os.homedir(), "Documents");
+  return path.join(documents, "Embarcadero", "Studio", "15.0");
 }
 
 function defaultRootDirectory(): string {
