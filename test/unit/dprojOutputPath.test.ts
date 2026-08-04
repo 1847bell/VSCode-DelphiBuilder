@@ -1,7 +1,12 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { addOutputPathHistory, updateDprojOutputPath } from "../../src/project/dprojOutputPath";
+import {
+  addOutputPathHistory,
+  getProjectOutputPathHistory,
+  updateDprojOutputPath,
+  updateProjectOutputPathHistory
+} from "../../src/project/dprojOutputPath";
 import { evaluateDproj } from "../../src/project/dprojParser";
 
 const projectFile = path.resolve("test/fixtures/Sample.dproj");
@@ -76,6 +81,65 @@ describe("dprojOutputPath", () => {
       "D:\\TWO",
       "D:\\One",
       "D:\\Three"
+    ]);
+  });
+
+  it("keeps the previous and new paths for each project", () => {
+    const firstProject = path.resolve("test/projects/First/App.dproj");
+    const secondProject = path.resolve("test/projects/Second/App.dproj");
+    let store = updateProjectOutputPathHistory(
+      undefined,
+      firstProject,
+      ["D:\\Test\\A", "D:\\Test\\B"],
+      5
+    );
+    store = updateProjectOutputPathHistory(
+      store,
+      firstProject,
+      ["D:\\Test\\B", "D:\\Test\\C"],
+      5
+    );
+    store = updateProjectOutputPathHistory(
+      store,
+      secondProject,
+      ["E:\\Output\\One", "E:\\Output\\Two"],
+      5
+    );
+
+    expect(getProjectOutputPathHistory(store, firstProject, 5)).toEqual([
+      "D:\\Test\\C",
+      "D:\\Test\\B",
+      "D:\\Test\\A"
+    ]);
+    expect(getProjectOutputPathHistory(store, secondProject, 5)).toEqual([
+      "E:\\Output\\Two",
+      "E:\\Output\\One"
+    ]);
+  });
+
+  it("applies the configured per-project history limit", () => {
+    const project = path.resolve("test/projects/App.dproj");
+    const store = updateProjectOutputPathHistory(
+      undefined,
+      project,
+      ["A", "B", "C", "D"],
+      3
+    );
+    expect(getProjectOutputPathHistory(store, project, 3)).toEqual(["D", "C", "B"]);
+  });
+
+  it("migrates the legacy shared history into the first updated project", () => {
+    const project = path.resolve("test/projects/App.dproj");
+    const store = updateProjectOutputPathHistory(
+      ["D:\\Legacy"],
+      project,
+      ["D:\\Current", "D:\\New"],
+      5
+    );
+    expect(getProjectOutputPathHistory(store, project, 5)).toEqual([
+      "D:\\New",
+      "D:\\Current",
+      "D:\\Legacy"
     ]);
   });
 });

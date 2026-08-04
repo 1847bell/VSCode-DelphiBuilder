@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.2.5
+
+- Keep both the previous and new output paths after a successful change and isolate history by normalized `.dproj` path.
+- Add `delphiXe7.outputPathHistoryLimit`, defaulting to 5 entries per project with a supported range of 1-15.
+
 ## 0.2.4
 
 - Add an Explorer context command for changing the selected configuration and platform's `DCC_ExeOutput`.

@@ -1,4 +1,11 @@
+import path from "node:path";
 import { DelphiPlatform } from "../core/types";
+
+export const DEFAULT_OUTPUT_PATH_HISTORY_LIMIT = 5;
+export const MIN_OUTPUT_PATH_HISTORY_LIMIT = 1;
+export const MAX_OUTPUT_PATH_HISTORY_LIMIT = 15;
+
+export type OutputPathHistoryStore = Record<string, string[]>;
 
 export interface UpdateDprojOutputPathOptions {
   configuration: string;
@@ -33,16 +40,77 @@ export function updateDprojOutputPath(
 export function addOutputPathHistory(
   history: readonly string[],
   outputPath: string,
-  limit = 10
+  limit = DEFAULT_OUTPUT_PATH_HISTORY_LIMIT
 ): string[] {
-  const value = outputPath.trim();
-  if (!value || limit <= 0) {
+  return normalizeOutputPathHistory([outputPath, ...history], limit);
+}
+
+export function getProjectOutputPathHistory(
+  storedValue: unknown,
+  projectFile: string,
+  limit = DEFAULT_OUTPUT_PATH_HISTORY_LIMIT
+): string[] {
+  const history = Array.isArray(storedValue)
+    ? storedValue
+    : readOutputPathHistoryStore(storedValue)[outputPathHistoryKey(projectFile)] ?? [];
+  return normalizeOutputPathHistory(history, limit);
+}
+
+export function updateProjectOutputPathHistory(
+  storedValue: unknown,
+  projectFile: string,
+  outputPaths: readonly string[],
+  limit = DEFAULT_OUTPUT_PATH_HISTORY_LIMIT
+): OutputPathHistoryStore {
+  const store = readOutputPathHistoryStore(storedValue);
+  let history = getProjectOutputPathHistory(storedValue, projectFile, limit);
+  for (const outputPath of outputPaths) {
+    history = addOutputPathHistory(history, outputPath, limit);
+  }
+  return {
+    ...store,
+    [outputPathHistoryKey(projectFile)]: history
+  };
+}
+
+function normalizeOutputPathHistory(history: readonly unknown[], limit: number): string[] {
+  const maximum = Number.isFinite(limit) ? Math.max(0, Math.trunc(limit)) : 0;
+  if (maximum === 0) {
     return [];
   }
-  const normalized = value.toLocaleLowerCase();
-  return [value, ...history.filter((item) => (
-    item.trim() && item.trim().toLocaleLowerCase() !== normalized
-  ))].slice(0, limit);
+  const normalized = new Set<string>();
+  const result: string[] = [];
+  for (const item of history) {
+    if (typeof item !== "string") {
+      continue;
+    }
+    const value = item.trim();
+    const key = value.toLocaleLowerCase();
+    if (!value || normalized.has(key)) {
+      continue;
+    }
+    normalized.add(key);
+    result.push(value);
+    if (result.length >= maximum) {
+      break;
+    }
+  }
+  return result;
+}
+
+function readOutputPathHistoryStore(value: unknown): OutputPathHistoryStore {
+  if (!value || Array.isArray(value) || typeof value !== "object") {
+    return {};
+  }
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, string[]] => (
+      Array.isArray(entry[1]) && entry[1].every((item) => typeof item === "string")
+    ))
+  );
+}
+
+function outputPathHistoryKey(projectFile: string): string {
+  return path.normalize(path.resolve(projectFile)).toLocaleLowerCase();
 }
 
 function readCondition(attributes: string): string | undefined {

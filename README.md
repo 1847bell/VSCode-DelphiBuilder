@@ -2,7 +2,7 @@
 
 Build Delphi XE7 Win32 and Win64 projects from Visual Studio Code by invoking `DCC32.exe` or `DCC64.exe` directly.
 
-Current version: `0.2.4`
+Current version: `0.2.5`
 
 ## Commands
 
@@ -15,7 +15,7 @@ Current version: `0.2.4`
 
 `delphiXe7.compilerPath` is required for Win32. `delphiXe7.compiler64Path` is optional; when it is non-empty, the `.dproj` Explorer context menu includes **Build for Win64**. Each build reads the project and prompts for one of its declared configurations. Rebuild remains available for Win32 from the Command Palette. **Show Build Plan** is always available from the Command Palette and can be enabled in the Explorer context menu with `delphiXe7.showBuildPlanMenu`.
 
-Right-click a `.dproj` and select **Change Output Path** to edit the effective `DCC_ExeOutput`. The current value is prefilled, and the picker also lists the 10 most recent values. The selected path is saved to the `.dproj` as an override for the chosen configuration and platform, so changing `Release|Win32` does not change another configuration or platform.
+Right-click a `.dproj` and select **Change Output Path** to edit the effective `DCC_ExeOutput`. The current value is prefilled, and both the previous and new values are retained after a successful change. History is isolated by the normalized full `.dproj` path and limited by `delphiXe7.outputPathHistoryLimit` (default `5`, range `1`-`15`). The selected path is saved as an override for the chosen configuration and platform, so changing `Release|Win32` does not change another configuration or platform.
 
 ## Current scope
 

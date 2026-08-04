@@ -2,7 +2,7 @@
 
 通过 Visual Studio Code 直接调用 `DCC32.exe` 或 `DCC64.exe`，编译 Delphi XE7 Win32、Win64 项目。
 
-当前版本：`0.2.4`
+当前版本：`0.2.5`
 
 ## 功能
 
@@ -24,10 +24,10 @@
 使用 VS Code 命令行安装打包好的 VSIX：
 
 ```powershell
-code --install-extension "D:\OthCode\DelphiBuilder\delphi-xe7-dcc-builder-0.2.4.vsix"
+code --install-extension "D:\OthCode\DelphiBuilder\delphi-xe7-dcc-builder-0.2.5.vsix"
 ```
 
-也可以在 VS Code 扩展视图右上角菜单中选择“从 VSIX 安装...”，然后选择 `delphi-xe7-dcc-builder-0.2.4.vsix`。
+也可以在 VS Code 扩展视图右上角菜单中选择“从 VSIX 安装...”，然后选择 `delphi-xe7-dcc-builder-0.2.5.vsix`。
 
 安装或更新后，建议重新加载 VS Code 窗口。
 
@@ -48,7 +48,7 @@ code --install-extension "D:\OthCode\DelphiBuilder\delphi-xe7-dcc-builder-0.2.4.
 
 Rebuild 仍可从命令面板执行，但不占用右键菜单。Show Build Plan 始终可从命令面板执行；右键菜单入口由 `delphiXe7.showBuildPlanMenu` 控制，默认隐藏。
 
-右键 `.dproj` 执行 `Delphi DCC Builder: Change Output Path` 后，扩展会按构建流程选择平台和配置。输入框预填当前有效的 `DCC_ExeOutput`，列表中提供最近 10 条输入记录。确认后会立即保存 `.dproj`，并写入所选 `配置|平台` 的专用覆盖项，因此修改 `Release|Win32` 不会影响 Debug 或 Win64。
+右键 `.dproj` 执行 `Delphi DCC Builder: Change Output Path` 后，扩展会按构建流程选择平台和配置。输入框预填当前有效的 `DCC_ExeOutput`；修改成功后，修改前地址和新地址都会进入该 dproj 的历史记录。历史按规范化后的 dproj 完整路径隔离，默认保留最近 5 条，可配置为 1-15 条。确认后会立即保存 `.dproj`，并写入所选 `配置|平台` 的专用覆盖项，因此修改 `Release|Win32` 不会影响 Debug 或 Win64。
 
 状态栏中的 `XE7 DCC Builder` 按钮用于启动 Win32 编译；编译期间按钮会变为运行状态，单击可取消编译。
 
@@ -80,6 +80,7 @@ Rebuild 仍可从命令面板执行，但不占用右键菜单。Show Build Plan
   "delphiXe7.compilerPath": "D:\\Program Files (x86)\\Embarcadero\\Studio\\15.0\\bin\\DCC32.exe",
   "delphiXe7.compiler64Path": "D:\\Program Files (x86)\\Embarcadero\\Studio\\15.0\\bin\\DCC64.exe",
   "delphiXe7.showBuildPlanMenu": "hide",
+  "delphiXe7.outputPathHistoryLimit": 5,
   "delphiXe7.outputEncoding": "system",
   "delphiXe7.additionalArguments": [],
   "delphiXe7.environment": {}
@@ -91,6 +92,7 @@ Rebuild 仍可从命令面板执行，但不占用右键菜单。Show Build Plan
 | `delphiXe7.compilerPath` | 空 | 必填，`DCC32.exe` 的绝对路径；为空时构建报错 |
 | `delphiXe7.compiler64Path` | 空 | 可选，`DCC64.exe` 的绝对路径；非空时显示 Win64 右键构建命令 |
 | `delphiXe7.showBuildPlanMenu` | `hide` | `.dproj` 右键菜单是否显示 Show Build Plan，可选 `hide`、`show` |
+| `delphiXe7.outputPathHistoryLimit` | `5` | 每个 `.dproj` 保存的产物地址历史记录数，范围 1-15 |
 | `delphiXe7.outputEncoding` | `system` | DCC32/DCC64 输出编码，可选 `system`、`cp936`、`utf8` |
 | `delphiXe7.additionalArguments` | `[]` | 在主源码参数之前追加的 DCC 参数数组 |
 | `delphiXe7.environment` | `{}` | 在 XE7 注册表环境之后覆盖的环境变量 |
@@ -275,9 +277,9 @@ npm run package
 
 ## 验证状态
 
-版本 `0.2.4` 当前已通过：
+版本 `0.2.5` 当前已通过：
 
-- 40 项常规测试
+- 44 项常规测试
 - 3 项真实 Delphi XE7 集成测试（包括 DCC64 Win64 编译）
 - TypeScript 严格类型检查
 - esbuild 打包

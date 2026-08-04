@@ -280,3 +280,36 @@
 - 最终 VSIX 为 `delphi-xe7-dcc-builder-0.2.4.vsix`，大小 607726 字节。
 - VSIX SHA-256：`53513BA528A3AA611162D307896BCD7F9B470FFDD141A23C5374B31E6BA84258`。
 - 最终差异审查和 `git diff --check` 通过，发布变更提交并推送到 `origin/main`。
+
+## 会话：2026-08-04（按项目保存输出路径历史）
+
+### 阶段 14：需求校正与实现准备
+- **状态：** complete
+- 用户确认首次 A -> B 后必须保留 A、B，继续改为 C 后保留 C、B、A。
+- 历史按规范化 dproj 完整路径隔离；同一项目的 Debug/Release、Win32/Win64 共享记录。
+- 新增整数设置 `delphiXe7.outputPathHistoryLimit`，默认 5，允许范围 1-15。
+- 当前根因已确认：0.2.4 只保存新值、使用全局共享数组并固定限制为 10。
+- planning session-catchup 找到未同步上下文，但因 GBK 无法输出 `›` 退出；已从现有输出和 Git 状态完成恢复。
+- 已将 globalState 历史升级为按规范化 dproj 完整路径索引的映射，并兼容旧版共享数组迁移。
+- 成功修改后按“新路径、修改前路径、既有历史”顺序去重保存；配置和平台共享同一项目历史。
+- 已新增 `delphiXe7.outputPathHistoryLimit` 整数设置，默认 5，范围 1-15，运行时也执行边界收敛。
+- 定向验证通过：dproj 历史与清单测试 11/11，TypeScript 严格检查和 `git diff --check` 通过。
+- 更新阶段记录时首次补丁分段标记错误，重新读取锚点后已正确更新，源码未受影响。
+- 完整验证通过：44/44 常规测试、3/3 真实 XE7 集成测试、TypeScript 严格检查、esbuild 和 VSIX 打包。
+- 重新生成的 `delphi-xe7-dcc-builder-0.2.4.vsix` 大小为 609567 字节。
+- VSIX SHA-256：`FBEB34B1936750223453A4BA615A3DDBCD34DB2258D4F4681097EAF1AA205DFF`。
+- 最终差异范围和 `git diff --check` 通过；本轮未提升版本、未提交或推送。
+
+## 会话：2026-08-04（0.2.5 发布）
+
+### 阶段 15：版本与发布
+- **状态：** complete
+- 用户要求版本增加 0.0.1，当前 0.2.4 将提升为 0.2.5，随后重新打包、提交并推送。
+- 已确认工作区仅包含按项目保存输出路径历史的预期修改，没有未跟踪文件。
+- 本轮只更新发布元数据和记录，不修改已经通过 44 项常规测试及 3 项真实 XE7 测试的功能实现。
+- 已使用 npm 标准版本命令将 package.json 与 package-lock.json 同步提升到 0.2.5，未创建 Git tag。
+- 已将输出路径历史修复从 Unreleased 归入 0.2.5，并更新中英文 README 的当前版本和 VSIX 文件名。
+- 完整验证通过：44/44 常规测试、3/3 真实 XE7 集成测试、TypeScript 严格检查、esbuild 和 VSIX 打包。
+- 最终 VSIX 为 `delphi-xe7-dcc-builder-0.2.5.vsix`，大小 609563 字节，包内 manifest 版本为 0.2.5。
+- VSIX SHA-256：`0AD819B9565E99ED9683BC217397110B9CF6F59D6DBF91D451E8E3303B1D0664`。
+- 最终版本一致性、完整差异审查和 `git diff --check` 均通过；发布变更提交并推送到 `origin/main`。

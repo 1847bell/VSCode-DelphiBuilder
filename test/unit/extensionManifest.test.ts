@@ -13,8 +13,11 @@ interface ExtensionManifest {
     configuration: {
       title: string;
       properties: Record<string, {
+        type?: string;
         default?: unknown;
         enum?: unknown[];
+        minimum?: number;
+        maximum?: number;
       }>;
     };
     menus: {
@@ -74,5 +77,10 @@ describe("extension manifest", () => {
     expect(menu[3].when).toContain("config.delphiXe7.showBuildPlanMenu == show");
     expect(manifest.contributes.configuration.properties["delphiXe7.showBuildPlanMenu"])
       .toMatchObject({ default: "hide", enum: ["hide", "show"] });
+  });
+
+  it("limits per-project output path history through settings", () => {
+    expect(manifest.contributes.configuration.properties["delphiXe7.outputPathHistoryLimit"])
+      .toMatchObject({ type: "integer", default: 5, minimum: 1, maximum: 15 });
   });
 });

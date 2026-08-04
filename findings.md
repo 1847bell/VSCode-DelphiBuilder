@@ -65,6 +65,13 @@
 - 已打开的 `.dproj` 必须通过 WorkspaceEdit 更新并保存；写入前比较最新内容，可避免覆盖弹窗打开期间发生的编辑。
 - 0.2.3 输出路径功能验证通过 40 项常规测试、3 项真实 XE7 集成测试、TypeScript 检查和 VSIX 打包。
 - 0.2.4 发布验证保持相同覆盖：40 项常规测试、3 项真实 XE7 集成测试、TypeScript 检查、esbuild 和 VSIX 打包全部通过。
+- 0.2.4 当前历史实现使用单一 globalState 数组，只在保存成功后记录新路径，因而首次从 A 改为 B 时不会保留 A，也会让不同 dproj 共用候选。
+- 正确模型是 `Record<normalizedDprojPath, string[]>`：保存成功后按“新值、旧值、既有历史”顺序去重，并按资源级 `outputPathHistoryLimit` 截断。
+- 历史数量设置使用整数，默认 5、最小 1、最大 15；同一 dproj 的配置和平台共享历史，不同完整路径的 dproj 相互隔离。
+- Quick Pick 将当前输入作为首项并从历史候选中过滤同值，因此 B 为当前值时仍会准确显示 B、A 两项而不会重复 B。
+- 旧版 globalState 共享数组无法还原所属项目，兼容策略是在首次成功修改时迁入当次 dproj，之后立即使用按项目映射格式。
+- 按项目历史修复完整验证通过：44 项常规测试、3 项真实 XE7 集成测试、TypeScript 检查、esbuild 和 VSIX 打包。
+- 0.2.5 发布包内 manifest 与 package/lock 版本一致；VSIX 大小 609563 字节，SHA-256 为 `0AD819B9565E99ED9683BC217397110B9CF6F59D6DBF91D451E8E3303B1D0664`。
 
 ## 技术决策
 | 决策 | 理由 |

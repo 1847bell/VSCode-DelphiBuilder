@@ -7,7 +7,14 @@ import { CompilerRunner } from "../compiler/compilerRunner";
 import { parseCompilerDiagnostics } from "../compiler/diagnosticParser";
 import { OutputEncodingSetting, resolveOutputEncoding } from "../compiler/outputEncoding";
 import { BuildPlan, DelphiPlatform } from "../core/types";
-import { addOutputPathHistory, updateDprojOutputPath } from "../project/dprojOutputPath";
+import {
+  DEFAULT_OUTPUT_PATH_HISTORY_LIMIT,
+  getProjectOutputPathHistory,
+  MAX_OUTPUT_PATH_HISTORY_LIMIT,
+  MIN_OUTPUT_PATH_HISTORY_LIMIT,
+  updateDprojOutputPath,
+  updateProjectOutputPathHistory
+} from "../project/dprojOutputPath";
 import { discoverConfigurations, evaluateDproj } from "../project/dprojParser";
 import { DiagnosticPublisher } from "../vscode/diagnosticPublisher";
 
@@ -159,11 +166,18 @@ export class BuildCommands implements vscode.Disposable {
       platform
     });
     const currentOutputPath = initialEvaluation.properties.DCC_ExeOutput?.trim() || ".";
+    const historyLimit = this.resolveOutputPathHistoryLimit(projectFile);
+    const history = getProjectOutputPathHistory(
+      this.globalState.get<unknown>(OUTPUT_PATH_HISTORY_KEY),
+      projectFile,
+      historyLimit
+    );
     const outputPath = await this.pickOutputPath(
       projectFile,
       configuration,
       platform,
-      currentOutputPath
+      currentOutputPath,
+      history
     );
 
     const latestContent = await this.readProjectContent(projectFile);
@@ -173,6 +187,12 @@ export class BuildCommands implements vscode.Disposable {
     if (!configurationDefinition) {
       throw new Error(`Configuration '${configuration}' is no longer defined in ${path.basename(projectFile)}.`);
     }
+
+    const latestEvaluation = evaluateDproj(latestContent, projectFile, {
+      configuration: configurationDefinition.name,
+      platform
+    });
+    const previousOutputPath = latestEvaluation.properties.DCC_ExeOutput?.trim() || ".";
 
     const updatedContent = updateDprojOutputPath(latestContent, {
       configuration: configurationDefinition.name,
@@ -190,10 +210,14 @@ export class BuildCommands implements vscode.Disposable {
     }
 
     await this.writeProjectContent(projectFile, latestContent, updatedContent);
-    const history = this.globalState.get<string[]>(OUTPUT_PATH_HISTORY_KEY, []);
     await this.globalState.update(
       OUTPUT_PATH_HISTORY_KEY,
-      addOutputPathHistory(history, outputPath)
+      updateProjectOutputPathHistory(
+        this.globalState.get<unknown>(OUTPUT_PATH_HISTORY_KEY),
+        projectFile,
+        [previousOutputPath, outputPath],
+        historyLimit
+      )
     );
     void vscode.window.showInformationMessage(
       `Output path updated for ${configurationDefinition.name}|${platform}: ${outputPath}`
@@ -340,17 +364,30 @@ export class BuildCommands implements vscode.Disposable {
     return selected.platform;
   }
 
+  private resolveOutputPathHistoryLimit(projectFile: string): number {
+    const configured = vscode.workspace
+      .getConfiguration("delphiXe7", vscode.Uri.file(projectFile))
+      .get<number>("outputPathHistoryLimit", DEFAULT_OUTPUT_PATH_HISTORY_LIMIT);
+    if (!Number.isFinite(configured)) {
+      return DEFAULT_OUTPUT_PATH_HISTORY_LIMIT;
+    }
+    return Math.min(
+      MAX_OUTPUT_PATH_HISTORY_LIMIT,
+      Math.max(MIN_OUTPUT_PATH_HISTORY_LIMIT, Math.trunc(configured))
+    );
+  }
+
   private async pickOutputPath(
     projectFile: string,
     configuration: string,
     platform: DelphiPlatform,
-    currentOutputPath: string
+    currentOutputPath: string,
+    history: readonly string[]
   ): Promise<string> {
     interface OutputPathItem extends vscode.QuickPickItem {
       outputPath: string;
     }
 
-    const history = this.globalState.get<string[]>(OUTPUT_PATH_HISTORY_KEY, []);
     const picker = vscode.window.createQuickPick<OutputPathItem>();
     picker.title = `Change Output Path: ${path.basename(projectFile)}`;
     picker.placeholder = `Output path for ${configuration}|${platform}`;
