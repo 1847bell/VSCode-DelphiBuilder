@@ -5,7 +5,7 @@ let commands: BuildCommands | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel("Delphi XE7 DCC Builder");
-  commands = new BuildCommands(output);
+  commands = new BuildCommands(output, context.globalState);
 
   context.subscriptions.push(
     output,
@@ -14,7 +14,8 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("delphiXe7.buildProjectWin64", (argument) => runSafely(output, () => commands!.build(argument, false, "Win64"))),
     vscode.commands.registerCommand("delphiXe7.rebuildProject", (argument) => runSafely(output, () => commands!.build(argument, true))),
     vscode.commands.registerCommand("delphiXe7.cancelBuild", (argument) => runSafely(output, () => commands!.cancel(argument))),
-    vscode.commands.registerCommand("delphiXe7.showBuildPlan", (argument) => runSafely(output, () => commands!.showBuildPlan(argument)))
+    vscode.commands.registerCommand("delphiXe7.showBuildPlan", (argument) => runSafely(output, () => commands!.showBuildPlan(argument))),
+    vscode.commands.registerCommand("delphiXe7.changeOutputPath", (argument) => runSafely(output, () => commands!.changeOutputPath(argument)))
   );
 }
 

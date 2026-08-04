@@ -2,7 +2,7 @@
 
 通过 Visual Studio Code 直接调用 `DCC32.exe` 或 `DCC64.exe`，编译 Delphi XE7 Win32、Win64 项目。
 
-当前版本：`0.2.3`
+当前版本：`0.2.4`
 
 ## 功能
 
@@ -15,6 +15,7 @@
 - 支持点击诊断跳转到对应源码行
 - 支持系统代码页、CP936/GBK 和 UTF-8 编译输出
 - 支持中文路径和包含空格的路径
+- 可从 `.dproj` 右键菜单按配置和平台修改产物路径，并选择最近输入记录
 - 每次编译固定使用 `--no-config`，防止 `.cfg` 隐式改变 Build Plan
 - 按 XE7 Targets 生成完整 `-R`，支持 VCL、FireDAC 的 `.res/.dfm` 资源查找
 
@@ -23,10 +24,10 @@
 使用 VS Code 命令行安装打包好的 VSIX：
 
 ```powershell
-code --install-extension "D:\OthCode\DelphiBuilder\delphi-xe7-dcc-builder-0.2.3.vsix"
+code --install-extension "D:\OthCode\DelphiBuilder\delphi-xe7-dcc-builder-0.2.4.vsix"
 ```
 
-也可以在 VS Code 扩展视图右上角菜单中选择“从 VSIX 安装...”，然后选择 `delphi-xe7-dcc-builder-0.2.3.vsix`。
+也可以在 VS Code 扩展视图右上角菜单中选择“从 VSIX 安装...”，然后选择 `delphi-xe7-dcc-builder-0.2.4.vsix`。
 
 安装或更新后，建议重新加载 VS Code 窗口。
 
@@ -36,15 +37,18 @@ code --install-extension "D:\OthCode\DelphiBuilder\delphi-xe7-dcc-builder-0.2.3.
 
 | 命令 | 说明 |
 |------|------|
-| `Delphi XE7 DCC Builder: Build Project Win32...` | 使用 DCC32 读取配置并增量编译当前项目 |
-| `Delphi XE7 DCC Builder: Build Project Win64...` | 使用 DCC64 读取配置并增量编译当前项目 |
-| `Delphi XE7 DCC Builder: Rebuild Project Win32` | 使用 DCC32 添加 `-B`，重新编译项目及其依赖单元 |
-| `Delphi XE7 DCC Builder: Cancel Build` | 终止当前 DCC32/DCC64 进程及其子进程 |
-| `Delphi XE7 DCC Builder: Show Build Plan` | 查看默认 Win32 构建的编译器、环境、参数和预期产物 |
+| `Delphi DCC Builder: Build for Win32` | 使用 DCC32 读取配置并增量编译当前项目 |
+| `Delphi DCC Builder: Build for Win64` | 使用 DCC64 读取配置并增量编译当前项目 |
+| `Delphi DCC Builder: Rebuild for Win32` | 使用 DCC32 添加 `-B`，重新编译项目及其依赖单元 |
+| `Delphi DCC Builder: Cancel Build` | 终止当前 DCC32/DCC64 进程及其子进程 |
+| `Delphi DCC Builder: Change Output Path` | 修改所选配置和平台的 `DCC_ExeOutput` |
+| `Delphi DCC Builder: Show Build Plan` | 查看默认 Win32 构建的编译器、环境、参数和预期产物 |
 
-在资源管理器中右键 `.dproj` 文件，始终可以执行 `Build Project Win32...`。只有 `delphiXe7.compiler64Path` 非空时，才会额外显示 `Build Project Win64...`。如果项目包含多个配置，随后弹出的选择列表会显示对应平台的 Debug、Release 等选项；只有一个配置时直接使用该配置。
+在资源管理器中右键 `.dproj` 文件，始终可以执行 `Build for Win32`。只有 `delphiXe7.compiler64Path` 非空时，才会额外显示 `Build for Win64`。如果项目包含多个配置，随后弹出的选择列表会显示对应平台的 Debug、Release 等选项；只有一个配置时直接使用该配置。
 
 Rebuild 仍可从命令面板执行，但不占用右键菜单。Show Build Plan 始终可从命令面板执行；右键菜单入口由 `delphiXe7.showBuildPlanMenu` 控制，默认隐藏。
+
+右键 `.dproj` 执行 `Delphi DCC Builder: Change Output Path` 后，扩展会按构建流程选择平台和配置。输入框预填当前有效的 `DCC_ExeOutput`，列表中提供最近 10 条输入记录。确认后会立即保存 `.dproj`，并写入所选 `配置|平台` 的专用覆盖项，因此修改 `Release|Win32` 不会影响 Debug 或 Win64。
 
 状态栏中的 `XE7 DCC Builder` 按钮用于启动 Win32 编译；编译期间按钮会变为运行状态，单击可取消编译。
 
@@ -271,9 +275,9 @@ npm run package
 
 ## 验证状态
 
-版本 `0.2.3` 当前已通过：
+版本 `0.2.4` 当前已通过：
 
-- 36 项常规测试
+- 40 项常规测试
 - 3 项真实 Delphi XE7 集成测试（包括 DCC64 Win64 编译）
 - TypeScript 严格类型检查
 - esbuild 打包

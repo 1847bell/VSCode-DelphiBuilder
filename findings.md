@@ -57,6 +57,14 @@
 - `rsvars.bat` 与 BDS Environment Variables 注册表均未定义 `BDSUSERDIR`，但 Win64 Library Search Path 引用了该宏；它需要按 IDE/MSBuild 的用户文档目录规则派生，不能从当前环境直接继承。
 - `BDSUSERDIR` 已按 HKCU User Shell Folders 的 `Personal` 路径派生为 `Personal\Embarcadero\Studio\15.0`，可正确处理本机文档目录重定向；DCC64 BuildPlan 不再残留该宏。
 - 本机真实 DCC64 已成功编译 Win64 fixture，证明平台化后的 dproj 条件、Library Path、Debug DCU Path 和参数链路可被 XE7 编译器接受。
+- codebase-memory-mcp 已在 2026-08-04 以 full 模式重新索引当前仓库；功能定稿后的索引包含 336 个节点、768 条关系，且未写入仓库制品。
+- `DCC_ExeOutput` 同时决定 DCC 的 `-E` 参数和 BuildPlan 预期 EXE/DLL 目录，输出路径编辑必须写回该属性而不是 DCC_DcuOutput。
+- VS Code `QuickPick` 支持可编辑 value、候选 items 和 `alwaysShow`，可以在一个弹窗中预填当前路径并始终展示历史记录。
+- 用户确认平台目标使用 `Build for Win32/Win64`，而 `with` 只适合表示 DCC32/DCC64 等工具；Rebuild 保留命令面板入口但不进入右键菜单。
+- 输出路径覆盖组应插入 Delphi Targets 的 `<Import>` 之前，确保导入和后续 DCC task 使用最终的 `DCC_ExeOutput`。
+- 已打开的 `.dproj` 必须通过 WorkspaceEdit 更新并保存；写入前比较最新内容，可避免覆盖弹窗打开期间发生的编辑。
+- 0.2.3 输出路径功能验证通过 40 项常规测试、3 项真实 XE7 集成测试、TypeScript 检查和 VSIX 打包。
+- 0.2.4 发布验证保持相同覆盖：40 项常规测试、3 项真实 XE7 集成测试、TypeScript 检查、esbuild 和 VSIX 打包全部通过。
 
 ## 技术决策
 | 决策 | 理由 |

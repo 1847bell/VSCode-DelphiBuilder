@@ -240,7 +240,7 @@
 ## 会话：2026-08-03（0.2.3 发布）
 
 ### 阶段 11：版本与发布准备
-- **状态：** in_progress
+- **状态：** complete
 - 用户要求版本增加 0.0.1，当前 0.2.2 将提升为 0.2.3，随后打包、提交并推送。
 - 工作区跟踪文件干净，本地 main 与远程一致；`Untitled-1.json` 继续保持未修改、未打包、未提交。
 - 本轮仅更新版本、当前版本文档和发布记录，不修改已验证的 Win32/Win64 构建逻辑。
@@ -250,3 +250,33 @@
 - 最终 VSIX 为 `delphi-xe7-dcc-builder-0.2.3.vsix`，大小 600196 字节；内容包含图标和中英文 README，不含 `Untitled-1.json`。
 - VSIX SHA-256：`3FB37B8C33C66F0BC65E18B0CB1D4FB930D4C76110771607F689586E23A88367`。
 - 最终版本一致性、VSIX 清单、差异范围和 `git diff --check` 均通过。
+
+## 会话：2026-08-04（输出路径编辑菜单）
+
+### 阶段 12：索引与设计确认
+- **状态：** complete
+- 已按用户要求用 codebase-memory-mcp 完整索引仓库；功能定稿后重建为 336 个节点、768 条关系，未生成仓库内索引制品。
+- 工作区开始时已有用户对 `package.json` 和 `extensionManifest.test.ts` 的英文命令标题修改，本轮保留并与新命令保持一致。
+- `Untitled-1.json` 继续保持未跟踪，不修改、不打包。
+- 设计为单个英文 `Change Output Path` 右键命令：选择平台/配置后，通过可编辑 Quick Pick 预填当前有效 `DCC_ExeOutput` 并显示最近历史。
+- 保存时写入配置与平台专用 PropertyGroup，避免修改 Base；写入前在内存中重新求值校验。
+- 已注册 `delphiXe7.changeOutputPath`，并在 `.dproj` 右键菜单显示英文 `Delphi DCC Builder: Change Output Path`。
+- DCC64 已配置时先选择 Win32/Win64，否则默认 Win32；配置选择继续复用 dproj 声明的 Debug、Release 或自定义配置。
+- 可编辑 Quick Pick 会预填当前有效路径，并从 globalState 提供最近 10 条去重历史记录。
+- 写入器优先更新精确配置/平台组，否则在 Delphi Targets Import 前新增覆盖组；保持 CRLF 并进行 XML 转义。
+- 已打开的 dproj 通过 WorkspaceEdit 合并当前编辑器内容并保存，未打开文件写入前也会检查并发修改。
+- 完整验证通过：40/40 常规测试、3/3 真实 XE7 集成测试、TypeScript 严格检查、esbuild 和 VSIX 打包。
+- 最终 VSIX 为 `delphi-xe7-dcc-builder-0.2.3.vsix`，大小 607737 字节，版本号保持 0.2.3。
+- VSIX SHA-256：`9E6D0F7D93EA403702CDE523AB73F45E84F849537AF4A989A6822AA9E7110C98`；包内不含用户样本。
+
+## 会话：2026-08-04（0.2.4 发布）
+
+### 阶段 13：版本与发布
+- **状态：** complete
+- 已使用 npm 标准版本命令将 package.json 与 package-lock.json 同步提升到 0.2.4，未创建 Git tag。
+- 已将输出路径功能从 Unreleased 归入 0.2.4，并更新中英文 README 的版本和 VSIX 文件名。
+- 已将构建命令统一为 `Build for Win32/Win64`，Rebuild 保留命令面板入口且仍不出现在右键菜单。
+- 完整验证通过：40/40 常规测试、3/3 真实 XE7 集成测试、TypeScript 严格检查、esbuild 和 VSIX 打包。
+- 最终 VSIX 为 `delphi-xe7-dcc-builder-0.2.4.vsix`，大小 607726 字节。
+- VSIX SHA-256：`53513BA528A3AA611162D307896BCD7F9B470FFDD141A23C5374B31E6BA84258`。
+- 最终差异审查和 `git diff --check` 通过，发布变更提交并推送到 `origin/main`。

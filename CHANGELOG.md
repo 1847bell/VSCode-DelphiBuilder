@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.2.4
+
+- Add an Explorer context command for changing the selected configuration and platform's `DCC_ExeOutput`.
+- Prefill the effective output path, retain the 10 most recent entries, and save the selected value back to the `.dproj`.
+- Use `Build for Win32/Win64` command titles and keep Rebuild as a Command Palette-only recovery action.
+
 ## 0.2.3
 
 - Rename the extension and its user-facing labels to Delphi XE7 DCC Builder while preserving existing command and setting identifiers.

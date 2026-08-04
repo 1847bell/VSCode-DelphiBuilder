@@ -2,7 +2,7 @@
   "name": "delphi-xe7-dcc-builder",
   "displayName": "Delphi XE7 DCC Builder",
   "description": "Build Delphi XE7 Win32 and Win64 projects with DCC32 and DCC64 from Visual Studio Code.",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "icon": "images/icon.png",
   "publisher": "local",
   "engines": {
@@ -24,34 +24,40 @@
     "onCommand:delphiXe7.buildProjectWin64",
     "onCommand:delphiXe7.rebuildProject",
     "onCommand:delphiXe7.cancelBuild",
-    "onCommand:delphiXe7.showBuildPlan"
+    "onCommand:delphiXe7.showBuildPlan",
+    "onCommand:delphiXe7.changeOutputPath"
   ],
   "contributes": {
     "commands": [
       {
         "command": "delphiXe7.buildProject",
-        "title": "Delphi XE7 DCC Builder: Build Project Win32...",
+        "title": "Delphi DCC Builder: Build for Win32",
         "icon": "$(tools)"
       },
       {
         "command": "delphiXe7.buildProjectWin64",
-        "title": "Delphi XE7 DCC Builder: Build Project Win64...",
+        "title": "Delphi DCC Builder: Build for Win64",
         "icon": "$(tools)"
       },
       {
         "command": "delphiXe7.rebuildProject",
-        "title": "Delphi XE7 DCC Builder: Rebuild Project Win32",
+        "title": "Delphi DCC Builder: Rebuild for Win32",
         "icon": "$(sync)"
       },
       {
         "command": "delphiXe7.cancelBuild",
-        "title": "Delphi XE7 DCC Builder: Cancel Build",
+        "title": "Delphi DCC Builder: Cancel Build",
         "icon": "$(debug-stop)"
       },
       {
         "command": "delphiXe7.showBuildPlan",
-        "title": "Delphi XE7 DCC Builder: Show Build Plan",
+        "title": "Delphi DCC Builder: Show Build Plan",
         "icon": "$(list-tree)"
+      },
+      {
+        "command": "delphiXe7.changeOutputPath",
+        "title": "Delphi DCC Builder: Change Output Path",
+        "icon": "$(folder-opened)"
       }
     ],
     "menus": {
@@ -67,9 +73,14 @@
           "group": "navigation@11"
         },
         {
+          "command": "delphiXe7.changeOutputPath",
+          "when": "resourceExtname == .dproj",
+          "group": "navigation@12"
+        },
+        {
           "command": "delphiXe7.showBuildPlan",
           "when": "resourceExtname == .dproj && config.delphiXe7.showBuildPlanMenu == show",
-          "group": "navigation@12"
+          "group": "navigation@13"
         }
       ]
     },

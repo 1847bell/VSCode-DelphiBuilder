@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import * as vscode from "vscode";
 import { createBuildPlan, redactBuildPlan } from "../compiler/buildPlan";
@@ -7,8 +7,11 @@ import { CompilerRunner } from "../compiler/compilerRunner";
 import { parseCompilerDiagnostics } from "../compiler/diagnosticParser";
 import { OutputEncodingSetting, resolveOutputEncoding } from "../compiler/outputEncoding";
 import { BuildPlan, DelphiPlatform } from "../core/types";
-import { discoverConfigurations } from "../project/dprojParser";
+import { addOutputPathHistory, updateDprojOutputPath } from "../project/dprojOutputPath";
+import { discoverConfigurations, evaluateDproj } from "../project/dprojParser";
 import { DiagnosticPublisher } from "../vscode/diagnosticPublisher";
+
+const OUTPUT_PATH_HISTORY_KEY = "delphiXe7.outputPathHistory";
 
 interface BuildCommandOptions {
   project?: string;
@@ -21,7 +24,10 @@ export class BuildCommands implements vscode.Disposable {
   private readonly diagnostics = new DiagnosticPublisher();
   private readonly statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
 
-  public constructor(private readonly output: vscode.OutputChannel) {
+  public constructor(
+    private readonly output: vscode.OutputChannel,
+    private readonly globalState: vscode.Memento
+  ) {
     this.statusBar.text = "$(tools) XE7 DCC Builder";
     this.statusBar.tooltip = "Build a Delphi XE7 Win32 project";
     this.statusBar.command = "delphiXe7.buildProject";
@@ -134,6 +140,66 @@ export class BuildCommands implements vscode.Disposable {
     await vscode.window.showTextDocument(document, { preview: true });
   }
 
+  public async changeOutputPath(argument: unknown): Promise<void> {
+    const commandOptions = parseCommandOptions(argument);
+    const projectFile = await this.resolveProject(argument, commandOptions);
+    const platform = commandOptions.platform
+      ? resolvePlatform(commandOptions.platform)
+      : await this.resolveOutputPathPlatform(projectFile);
+    const initialContent = await this.readProjectContent(projectFile);
+    const configuration = await this.resolveConfiguration(
+      projectFile,
+      commandOptions.configuration,
+      "Change Output Path",
+      platform,
+      initialContent
+    );
+    const initialEvaluation = evaluateDproj(initialContent, projectFile, {
+      configuration,
+      platform
+    });
+    const currentOutputPath = initialEvaluation.properties.DCC_ExeOutput?.trim() || ".";
+    const outputPath = await this.pickOutputPath(
+      projectFile,
+      configuration,
+      platform,
+      currentOutputPath
+    );
+
+    const latestContent = await this.readProjectContent(projectFile);
+    const configurationDefinition = discoverConfigurations(latestContent).find((item) => (
+      item.name.toLocaleLowerCase() === configuration.toLocaleLowerCase()
+    ));
+    if (!configurationDefinition) {
+      throw new Error(`Configuration '${configuration}' is no longer defined in ${path.basename(projectFile)}.`);
+    }
+
+    const updatedContent = updateDprojOutputPath(latestContent, {
+      configuration: configurationDefinition.name,
+      configurationKey: configurationDefinition.key,
+      platform,
+      outputPath
+    });
+    const updatedEvaluation = evaluateDproj(updatedContent, projectFile, {
+      configuration: configurationDefinition.name,
+      platform
+    });
+    const effectiveOutputPath = updatedEvaluation.properties.DCC_ExeOutput?.trim();
+    if (!effectiveOutputPath) {
+      throw new Error("The updated output path is not effective for the selected configuration and platform.");
+    }
+
+    await this.writeProjectContent(projectFile, latestContent, updatedContent);
+    const history = this.globalState.get<string[]>(OUTPUT_PATH_HISTORY_KEY, []);
+    await this.globalState.update(
+      OUTPUT_PATH_HISTORY_KEY,
+      addOutputPathHistory(history, outputPath)
+    );
+    void vscode.window.showInformationMessage(
+      `Output path updated for ${configurationDefinition.name}|${platform}: ${outputPath}`
+    );
+  }
+
   public async cancel(argument: unknown): Promise<void> {
     const options = parseCommandOptions(argument);
     const project = argument instanceof vscode.Uri
@@ -220,12 +286,13 @@ export class BuildCommands implements vscode.Disposable {
     projectFile: string,
     requested: string | undefined,
     action: string,
-    platform: DelphiPlatform
+    platform: DelphiPlatform,
+    projectContent?: string
   ): Promise<string> {
     if (requested) {
       return requested;
     }
-    const configurations = discoverConfigurations(await readFile(projectFile, "utf8"))
+    const configurations = discoverConfigurations(projectContent ?? await readFile(projectFile, "utf8"))
       .filter((item) => item.name.toLocaleLowerCase() !== "base");
     if (configurations.length === 0) {
       throw new Error(`No build configurations were found in ${path.basename(projectFile)}.`);
@@ -246,6 +313,132 @@ export class BuildCommands implements vscode.Disposable {
       throw new CancellationError();
     }
     return selected.configuration;
+  }
+
+  private async resolveOutputPathPlatform(projectFile: string): Promise<DelphiPlatform> {
+    const compiler64Path = vscode.workspace
+      .getConfiguration("delphiXe7", vscode.Uri.file(projectFile))
+      .get<string>("compiler64Path", "")
+      .trim();
+    if (!compiler64Path) {
+      return "Win32";
+    }
+
+    const selected = await vscode.window.showQuickPick<{
+      label: DelphiPlatform;
+      description: string;
+      platform: DelphiPlatform;
+    }>([
+      { label: "Win32", description: "DCC32 output", platform: "Win32" },
+      { label: "Win64", description: "DCC64 output", platform: "Win64" }
+    ], {
+      placeHolder: `Select a platform for ${path.basename(projectFile)}`
+    });
+    if (!selected) {
+      throw new CancellationError();
+    }
+    return selected.platform;
+  }
+
+  private async pickOutputPath(
+    projectFile: string,
+    configuration: string,
+    platform: DelphiPlatform,
+    currentOutputPath: string
+  ): Promise<string> {
+    interface OutputPathItem extends vscode.QuickPickItem {
+      outputPath: string;
+    }
+
+    const history = this.globalState.get<string[]>(OUTPUT_PATH_HISTORY_KEY, []);
+    const picker = vscode.window.createQuickPick<OutputPathItem>();
+    picker.title = `Change Output Path: ${path.basename(projectFile)}`;
+    picker.placeholder = `Output path for ${configuration}|${platform}`;
+    picker.matchOnDescription = true;
+
+    const refreshItems = (value: string): void => {
+      const input = value.trim();
+      const inputItem = input
+        ? [{ label: input, description: "Current input", outputPath: input }]
+        : [];
+      const normalizedInput = input.toLocaleLowerCase();
+      const historyItems = history
+        .filter((item) => item.trim() && item.trim().toLocaleLowerCase() !== normalizedInput)
+        .map((item) => ({
+          label: item,
+          description: "Recent output path",
+          outputPath: item,
+          alwaysShow: true
+        }));
+      picker.items = [...inputItem, ...historyItems];
+      picker.activeItems = inputItem;
+    };
+
+    picker.value = currentOutputPath;
+    refreshItems(currentOutputPath);
+    return new Promise<string>((resolve, reject) => {
+      let accepted = false;
+      const disposables = [
+        picker.onDidChangeValue(refreshItems),
+        picker.onDidAccept(() => {
+          const outputPath = picker.activeItems[0]?.outputPath ?? picker.value.trim();
+          if (!outputPath) {
+            picker.placeholder = "Output path cannot be empty.";
+            return;
+          }
+          accepted = true;
+          picker.hide();
+          resolve(outputPath);
+        }),
+        picker.onDidHide(() => {
+          if (!accepted) {
+            reject(new CancellationError());
+          }
+          for (const disposable of disposables) {
+            disposable.dispose();
+          }
+          picker.dispose();
+        })
+      ];
+      picker.show();
+    });
+  }
+
+  private async readProjectContent(projectFile: string): Promise<string> {
+    const document = findOpenDocument(projectFile);
+    return document ? document.getText() : readFile(projectFile, "utf8");
+  }
+
+  private async writeProjectContent(
+    projectFile: string,
+    originalContent: string,
+    updatedContent: string
+  ): Promise<void> {
+    const document = findOpenDocument(projectFile);
+    if (document) {
+      if (document.getText() !== originalContent) {
+        throw new Error(`${path.basename(projectFile)} changed while the output path was being updated. Try again.`);
+      }
+      const edit = new vscode.WorkspaceEdit();
+      edit.replace(
+        document.uri,
+        new vscode.Range(document.positionAt(0), document.positionAt(originalContent.length)),
+        updatedContent
+      );
+      if (!await vscode.workspace.applyEdit(edit)) {
+        throw new Error(`Could not update ${path.basename(projectFile)}.`);
+      }
+      if (!await document.save()) {
+        throw new Error(`Could not save ${path.basename(projectFile)}.`);
+      }
+      return;
+    }
+
+    const diskContent = await readFile(projectFile, "utf8");
+    if (diskContent !== originalContent) {
+      throw new Error(`${path.basename(projectFile)} changed while the output path was being updated. Try again.`);
+    }
+    await writeFile(projectFile, updatedContent, "utf8");
   }
 
   private resolveCompilerPath(projectFile: string, platform: DelphiPlatform): string {
@@ -320,6 +513,13 @@ function isDproj(file: string): boolean {
 
 function normalizeProjectKey(file: string): string {
   return path.normalize(file).toLocaleLowerCase();
+}
+
+function findOpenDocument(file: string): vscode.TextDocument | undefined {
+  const key = normalizeProjectKey(file);
+  return vscode.workspace.textDocuments.find((document) => (
+    document.uri.scheme === "file" && normalizeProjectKey(document.uri.fsPath) === key
+  ));
 }
 
 function resolvePlatform(platform: string | undefined): DelphiPlatform {
