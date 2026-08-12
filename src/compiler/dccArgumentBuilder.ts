@@ -1,8 +1,13 @@
 import path from "node:path";
-import { DprojEvaluation } from "../core/types";
+import { DelphiVersion, DprojEvaluation } from "../core/types";
+import {
+  DEFAULT_DELPHI_VERSION,
+  getDelphiVersionConfiguration
+} from "../delphi/versions";
 import { expandProperties, PropertyBag } from "../project/propertyResolver";
 
 export interface DccArgumentOptions {
+  version?: DelphiVersion;
   rebuild?: boolean;
   libraryPath?: string;
   debugDcuPath?: string;
@@ -14,62 +19,20 @@ export interface DccArgumentResult {
   warnings: string[];
 }
 
-const PATH_SWITCHES: Array<[string, string]> = [
-  ["DCC_ObjPath", "-O"]
-];
-
-const VALUE_SWITCHES: Array<[string, string]> = [
-  ["DCC_Define", "-D"],
-  ["DCC_UnitAlias", "-A"],
-  ["DCC_Namespace", "-NS"]
-];
-
-const OUTPUT_SWITCHES: Array<[string, string]> = [
-  ["DCC_ExeOutput", "-E"],
-  ["DCC_DcuOutput", "-N0"],
-  ["DCC_BplOutput", "-LE"],
-  ["DCC_DcpOutput", "-LN"]
-];
-
-const BOOLEAN_DIRECTIVES: Array<[string, string]> = [
-  ["DCC_BooleanEvaluation", "B"],
-  ["DCC_Assertions", "C"],
-  ["DCC_LongStrings", "H"],
-  ["DCC_IOChecking", "I"],
-  ["DCC_WriteableConst", "J"],
-  ["DCC_LocalDebugSymbols", "L"],
-  ["DCC_Optimize", "O"],
-  ["DCC_OpenStringParams", "P"],
-  ["DCC_OverflowChecking", "Q"],
-  ["DCC_RangeChecking", "R"],
-  ["DCC_TypedAddress", "T"],
-  ["DCC_PentiumSafeDivide", "U"],
-  ["DCC_StrictVarStrings", "V"],
-  ["DCC_GenerateStackFrames", "W"],
-  ["DCC_ExtendedSyntax", "X"]
-];
-
-const KNOWN_METADATA = new Set([
-  "DCC_CBuilderOutput",
-  "DCC_DependencyCheckOutputName",
-  "DCC_Description",
-  "DCC_ImageBase",
-  "DCC_OutputType",
-  "DCC_Platform",
-  "DCC_SanitizedProjectName"
-].map((name) => name.toLocaleLowerCase()));
-
 export function buildDccArguments(
   evaluation: DprojEvaluation,
   options: DccArgumentOptions = {}
 ): DccArgumentResult {
   const properties = new PropertyBag(evaluation.properties);
+  const dccConfiguration = getDelphiVersionConfiguration(
+    options.version ?? DEFAULT_DELPHI_VERSION
+  ).dcc;
   const projectDirectory = path.dirname(evaluation.projectFile);
   const warnings: string[] = [];
-  const args: string[] = ["--no-config"];
+  const args: string[] = [...dccConfiguration.baseArguments];
   const handled = new Set<string>();
 
-  for (const [propertyName, flag] of VALUE_SWITCHES) {
+  for (const [propertyName, flag] of Object.entries(dccConfiguration.valueSwitches)) {
     addValueSwitch(args, handled, properties, propertyName, flag);
   }
 
@@ -77,7 +40,7 @@ export function buildDccArguments(
   const usePackages = ["UsePackages", "DCC_EnabledPackages"]
     .some((propertyName) => parseBoolean(getExpanded(properties, propertyName) ?? "") === true);
   if (usePackages && usePackageList) {
-    args.push(`-LU${usePackageList}`);
+    args.push(`${dccConfiguration.specialSwitches.runtimePackages}${usePackageList}`);
   }
   handled.add("dcc_usepackage");
   handled.add("dcc_enabledpackages");
@@ -94,7 +57,9 @@ export function buildDccArguments(
     options.libraryPath
   );
   if (unitSearchPath) {
-    args.push(`-U${resolvePathList(unitSearchPath, projectDirectory)}`);
+    args.push(
+      `${dccConfiguration.specialSwitches.unitSearchPath}${resolvePathList(unitSearchPath, projectDirectory)}`
+    );
   }
   handled.add("dcc_unitsearchpath");
   handled.add("dcc_translateddebuglibrarypath");
@@ -105,7 +70,9 @@ export function buildDccArguments(
     unitSearchPath
   );
   if (includePath) {
-    args.push(`-I${resolvePathList(includePath, projectDirectory)}`);
+    args.push(
+      `${dccConfiguration.specialSwitches.includePath}${resolvePathList(includePath, projectDirectory)}`
+    );
   }
   handled.add("dcc_includepath");
 
@@ -117,97 +84,38 @@ export function buildDccArguments(
     options.libraryPath
   );
   if (resourcePath) {
-    args.push(`-R${resolvePathList(resourcePath, projectDirectory)}`);
+    args.push(
+      `${dccConfiguration.specialSwitches.resourcePath}${resolvePathList(resourcePath, projectDirectory)}`
+    );
   }
   handled.add("dcc_translatedresourcepath");
   handled.add("dcc_resourcepath");
 
-  for (const [propertyName, flag] of PATH_SWITCHES) {
+  for (const [propertyName, mapping] of Object.entries(dccConfiguration.pathSwitches)) {
     const value = getExpanded(properties, propertyName);
     if (value) {
-      args.push(`${flag}${resolvePathList(value, projectDirectory)}`);
+      const resolved = mapping.kind === "list"
+        ? resolvePathList(value, projectDirectory)
+        : resolveSinglePath(value, projectDirectory);
+      args.push(`${mapping.switch}${resolved}`);
     }
     handled.add(propertyName.toLocaleLowerCase());
   }
 
-  for (const [propertyName, flag] of OUTPUT_SWITCHES) {
-    const value = getExpanded(properties, propertyName);
-    if (value) {
-      args.push(`${flag}${resolveSinglePath(value, projectDirectory)}`);
-    }
-    handled.add(propertyName.toLocaleLowerCase());
+  for (const rule of dccConfiguration.argumentRules) {
+    addConfiguredArguments(args, handled, properties, rule, warnings);
   }
-
-  for (const [propertyName, directive] of BOOLEAN_DIRECTIVES) {
-    const value = getExpanded(properties, propertyName);
-    if (value !== undefined && value !== "") {
-      const enabled = parseBoolean(value);
-      if (enabled === undefined) {
-        warnings.push(`Unsupported boolean value for ${propertyName}: ${value}`);
-      } else {
-        args.push(`-$${directive}${enabled ? "+" : "-"}`);
-      }
-    }
-    handled.add(propertyName.toLocaleLowerCase());
-  }
-
-  addEnumDirective(args, handled, properties, "DCC_DebugInformation", {
-    "0": "-$D0",
-    "1": "-$D1",
-    "2": "-$D2"
-  }, warnings);
-  addEnumDirective(args, handled, properties, "DCC_SymbolReferenceInfo", {
-    "0": "-$Y-",
-    "1": "-$YD",
-    "2": "-$Y+"
-  }, warnings);
-
-  const debugInfoInExe = getExpanded(properties, "DCC_DebugInfoInExe");
-  const debugInfoInExeEnabled = parseOptionalBoolean(
-    debugInfoInExe,
-    "DCC_DebugInfoInExe",
-    warnings
-  );
-  if (debugInfoInExeEnabled) {
-    args.push("-V", "-VN");
-  }
-  handled.add("dcc_debuginfoinexe");
-
-  const mapFile = getExpanded(properties, "DCC_MapFile");
-  if (mapFile && mapFile !== "0") {
-    const mapSwitch = ({ "1": "-GS", "2": "-GP", "3": "-GD" } as Record<string, string>)[mapFile];
-    if (mapSwitch) {
-      args.push(mapSwitch);
-    } else {
-      warnings.push(`Unsupported DCC_MapFile value: ${mapFile}`);
-    }
-  }
-  handled.add("dcc_mapfile");
-
-  const minEnumSize = getExpanded(properties, "DCC_MinEnumSize");
-  if (minEnumSize && ["1", "2", "4"].includes(minEnumSize)) {
-    args.push(`-$Z${minEnumSize}`);
-  } else if (minEnumSize && minEnumSize !== "0") {
-    warnings.push(`Unsupported DCC_MinEnumSize value: ${minEnumSize}`);
-  }
-  handled.add("dcc_minenumsize");
-
-  const alignment = getExpanded(properties, "DCC_Align");
-  if (alignment && ["1", "2", "4", "8", "16"].includes(alignment)) {
-    args.push(`-$A${alignment}`);
-  } else if (alignment) {
-    warnings.push(`Unsupported DCC_Align value: ${alignment}`);
-  }
-  handled.add("dcc_align");
 
   if (options.rebuild) {
-    args.push("-B");
+    args.push(...dccConfiguration.rebuildArguments);
   }
   args.push(...(options.additionalArguments ?? []));
 
   for (const name of Object.keys(evaluation.properties)) {
     const normalized = name.toLocaleLowerCase();
-    if (normalized.startsWith("dcc_") && !handled.has(normalized) && !KNOWN_METADATA.has(normalized)) {
+    const knownMetadata = dccConfiguration.knownMetadata
+      .some((item) => item.toLocaleLowerCase() === normalized);
+    if (normalized.startsWith("dcc_") && !handled.has(normalized) && !knownMetadata) {
       warnings.push(`DCC property is not mapped to a compiler argument: ${name}`);
     }
   }
@@ -231,24 +139,32 @@ function addValueSwitch(
   handled.add(propertyName.toLocaleLowerCase());
 }
 
-function addEnumDirective(
+function addConfiguredArguments(
   args: string[],
   handled: Set<string>,
   properties: PropertyBag,
-  propertyName: string,
-  mappings: Record<string, string>,
+  rule: {
+    property: string;
+    kind: "boolean" | "enum";
+    values: Record<string, string[]>;
+  },
   warnings: string[]
 ): void {
-  const value = getExpanded(properties, propertyName);
+  const value = getExpanded(properties, rule.property);
   if (value) {
-    const directive = mappings[value];
-    if (directive) {
-      args.push(directive);
+    const mappingKey = rule.kind === "boolean"
+      ? String(parseBoolean(value))
+      : value;
+    const mappedArguments = rule.values[mappingKey];
+    if (mappedArguments) {
+      args.push(...mappedArguments);
     } else {
-      warnings.push(`Unsupported ${propertyName} value: ${value}`);
+      warnings.push(rule.kind === "boolean"
+        ? `Unsupported boolean value for ${rule.property}: ${value}`
+        : `Unsupported ${rule.property} value: ${value}`);
     }
   }
-  handled.add(propertyName.toLocaleLowerCase());
+  handled.add(rule.property.toLocaleLowerCase());
 }
 
 function getExpanded(properties: PropertyBag, propertyName: string): string | undefined {

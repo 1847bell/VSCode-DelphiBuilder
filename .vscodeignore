@@ -1,6 +1,7 @@
 .vscode/**
 .gitignore
 src/**
+!delphi-versions/**
 test/**
 coverage/**
 *.md

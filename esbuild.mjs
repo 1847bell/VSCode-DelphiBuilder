@@ -14,7 +14,7 @@ const context = await esbuild.context({
 
 if (watch) {
   await context.watch();
-  console.log("Watching Delphi XE7 DCC Builder extension sources...");
+  console.log("Watching Delphi DCC Builder extension sources...");
 } else {
   await context.rebuild();
   await context.dispose();

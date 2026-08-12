@@ -1,10 +1,14 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { getSupportedDelphiVersions } from "../../src/delphi/versions";
 
 interface ExtensionManifest {
   name: string;
   displayName: string;
+  description: string;
+  publisher: string;
+  author: string;
   contributes: {
     commands: Array<{
       command: string;
@@ -35,9 +39,14 @@ const manifest = JSON.parse(
 
 describe("extension manifest", () => {
   it("uses the expected branding and command labels", () => {
-    expect(manifest.name).toBe("delphi-xe7-dcc-builder");
-    expect(manifest.displayName).toBe("Delphi XE7 DCC Builder");
-    expect(manifest.contributes.configuration.title).toBe("Delphi XE7 DCC Builder");
+    expect(manifest.name).toBe("delphi-dcc-builder");
+    expect(manifest.displayName).toBe("Delphi DCC Builder");
+    expect(manifest.description).toBe(
+      "Build Delphi Win32 and Win64 projects with DCC32 and DCC64 from Visual Studio Code."
+    );
+    expect(manifest.publisher).toBe("1847bell");
+    expect(manifest.author).toBe("Alex Niu");
+    expect(manifest.contributes.configuration.title).toBe("Delphi DCC Builder");
     expect(manifest.contributes.commands.map((item) => item.command)).toEqual([
       "delphiXe7.buildProject",
       "delphiXe7.buildProjectWin64",
@@ -62,6 +71,15 @@ describe("extension manifest", () => {
     expect(properties).not.toHaveProperty("delphiXe7.defaultConfiguration");
     expect(properties["delphiXe7.compilerPath"].default).toBe("");
     expect(properties["delphiXe7.compiler64Path"].default).toBe("");
+  });
+
+  it("offers the supported Delphi versions as a dropdown", () => {
+    expect(manifest.contributes.configuration.properties["delphiDcc.version"])
+      .toMatchObject({
+        type: "string",
+        default: "XE7",
+        enum: getSupportedDelphiVersions()
+      });
   });
 
   it("shows Win64 in the context menu only when DCC64 is configured", () => {

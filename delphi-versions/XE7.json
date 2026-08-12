@@ -1,0 +1,89 @@
+{
+  "$schema": "./schema.json",
+  "version": "XE7",
+  "displayName": "Delphi XE7",
+  "bdsRegistryVersion": "15.0",
+  "studioDirectoryVersion": "15.0",
+  "settingsSection": "delphiXe7",
+  "compilerSettingNames": {
+    "Win32": "compilerPath",
+    "Win64": "compiler64Path"
+  },
+  "compilerFileNames": {
+    "Win32": "DCC32.exe",
+    "Win64": "DCC64.exe"
+  },
+  "dcc": {
+    "baseArguments": [
+      "--no-config"
+    ],
+    "rebuildArguments": [
+      "-B"
+    ],
+    "specialSwitches": {
+      "unitSearchPath": "-U",
+      "includePath": "-I",
+      "resourcePath": "-R",
+      "runtimePackages": "-LU"
+    },
+    "valueSwitches": {
+      "DCC_Define": "-D",
+      "DCC_UnitAlias": "-A",
+      "DCC_Namespace": "-NS"
+    },
+    "pathSwitches": {
+      "DCC_ObjPath": {
+        "switch": "-O",
+        "kind": "list"
+      },
+      "DCC_ExeOutput": {
+        "switch": "-E",
+        "kind": "single"
+      },
+      "DCC_DcuOutput": {
+        "switch": "-N0",
+        "kind": "single"
+      },
+      "DCC_BplOutput": {
+        "switch": "-LE",
+        "kind": "single"
+      },
+      "DCC_DcpOutput": {
+        "switch": "-LN",
+        "kind": "single"
+      }
+    },
+    "argumentRules": [
+      { "property": "DCC_BooleanEvaluation", "kind": "boolean", "values": { "true": ["-$B+"], "false": ["-$B-"] } },
+      { "property": "DCC_Assertions", "kind": "boolean", "values": { "true": ["-$C+"], "false": ["-$C-"] } },
+      { "property": "DCC_LongStrings", "kind": "boolean", "values": { "true": ["-$H+"], "false": ["-$H-"] } },
+      { "property": "DCC_IOChecking", "kind": "boolean", "values": { "true": ["-$I+"], "false": ["-$I-"] } },
+      { "property": "DCC_WriteableConst", "kind": "boolean", "values": { "true": ["-$J+"], "false": ["-$J-"] } },
+      { "property": "DCC_LocalDebugSymbols", "kind": "boolean", "values": { "true": ["-$L+"], "false": ["-$L-"] } },
+      { "property": "DCC_Optimize", "kind": "boolean", "values": { "true": ["-$O+"], "false": ["-$O-"] } },
+      { "property": "DCC_OpenStringParams", "kind": "boolean", "values": { "true": ["-$P+"], "false": ["-$P-"] } },
+      { "property": "DCC_OverflowChecking", "kind": "boolean", "values": { "true": ["-$Q+"], "false": ["-$Q-"] } },
+      { "property": "DCC_RangeChecking", "kind": "boolean", "values": { "true": ["-$R+"], "false": ["-$R-"] } },
+      { "property": "DCC_TypedAddress", "kind": "boolean", "values": { "true": ["-$T+"], "false": ["-$T-"] } },
+      { "property": "DCC_PentiumSafeDivide", "kind": "boolean", "values": { "true": ["-$U+"], "false": ["-$U-"] } },
+      { "property": "DCC_StrictVarStrings", "kind": "boolean", "values": { "true": ["-$V+"], "false": ["-$V-"] } },
+      { "property": "DCC_GenerateStackFrames", "kind": "boolean", "values": { "true": ["-$W+"], "false": ["-$W-"] } },
+      { "property": "DCC_ExtendedSyntax", "kind": "boolean", "values": { "true": ["-$X+"], "false": ["-$X-"] } },
+      { "property": "DCC_DebugInformation", "kind": "enum", "values": { "0": ["-$D0"], "1": ["-$D1"], "2": ["-$D2"] } },
+      { "property": "DCC_SymbolReferenceInfo", "kind": "enum", "values": { "0": ["-$Y-"], "1": ["-$YD"], "2": ["-$Y+"] } },
+      { "property": "DCC_DebugInfoInExe", "kind": "boolean", "values": { "true": ["-V", "-VN"], "false": [] } },
+      { "property": "DCC_MapFile", "kind": "enum", "values": { "0": [], "1": ["-GS"], "2": ["-GP"], "3": ["-GD"] } },
+      { "property": "DCC_MinEnumSize", "kind": "enum", "values": { "0": [], "1": ["-$Z1"], "2": ["-$Z2"], "4": ["-$Z4"] } },
+      { "property": "DCC_Align", "kind": "enum", "values": { "1": ["-$A1"], "2": ["-$A2"], "4": ["-$A4"], "8": ["-$A8"], "16": ["-$A16"] } }
+    ],
+    "knownMetadata": [
+      "DCC_CBuilderOutput",
+      "DCC_DependencyCheckOutputName",
+      "DCC_Description",
+      "DCC_ImageBase",
+      "DCC_OutputType",
+      "DCC_Platform",
+      "DCC_SanitizedProjectName"
+    ]
+  }
+}

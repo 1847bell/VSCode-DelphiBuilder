@@ -1,4 +1,4 @@
-# 任务计划：Delphi XE7 VS Code 编译扩展
+# 任务计划：Delphi DCC Builder VS Code 扩展
 
 ## 目标
 交付一个可打包的 VS Code 扩展首版，能够从 `.dproj` 生成可审查的 BuildPlan，并通过 DCC32 执行 Build/Rebuild、取消构建和发布诊断。
@@ -75,7 +75,7 @@
 - **状态：** complete
 
 ### 阶段 10：Delphi XE7 品牌与 Win64 构建支持
-- [x] 将包名和全部用户可见品牌改为 Delphi XE7 DCC Builder
+- [x] 将包名和全部用户可见品牌改为 Delphi DCC Builder
 - [x] 增加可选 DCC64 路径配置和 Win64 平台构建链路
 - [x] 仅在 DCC64 路径非空时显示 Win64 右键构建命令
 - [x] 增加清单、平台、环境路径和参数回归测试

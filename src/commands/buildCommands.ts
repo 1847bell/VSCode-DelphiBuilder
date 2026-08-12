@@ -6,7 +6,11 @@ import { createBuildPlan, redactBuildPlan } from "../compiler/buildPlan";
 import { CompilerRunner } from "../compiler/compilerRunner";
 import { parseCompilerDiagnostics } from "../compiler/diagnosticParser";
 import { OutputEncodingSetting, resolveOutputEncoding } from "../compiler/outputEncoding";
-import { BuildPlan, DelphiPlatform } from "../core/types";
+import { BuildPlan, DelphiPlatform, DelphiVersion } from "../core/types";
+import {
+  getDelphiVersionConfiguration,
+  resolveDelphiVersion
+} from "../delphi/versions";
 import {
   DEFAULT_OUTPUT_PATH_HISTORY_LIMIT,
   getProjectOutputPathHistory,
@@ -16,14 +20,23 @@ import {
   updateProjectOutputPathHistory
 } from "../project/dprojOutputPath";
 import { discoverConfigurations, evaluateDproj } from "../project/dprojParser";
+import {
+  getProjectSelectionHistory,
+  updateProjectSelectionHistory
+} from "../project/projectSelectionHistory";
 import { DiagnosticPublisher } from "../vscode/diagnosticPublisher";
 
 const OUTPUT_PATH_HISTORY_KEY = "delphiXe7.outputPathHistory";
+const PROJECT_SELECTION_HISTORY_KEY = "delphiXe7.projectSelectionHistory";
 
 interface BuildCommandOptions {
   project?: string;
   configuration?: string;
   platform?: string;
+}
+
+interface ProjectQuickPickItem extends vscode.QuickPickItem {
+  uri: vscode.Uri;
 }
 
 export class BuildCommands implements vscode.Disposable {
@@ -33,10 +46,11 @@ export class BuildCommands implements vscode.Disposable {
 
   public constructor(
     private readonly output: vscode.OutputChannel,
-    private readonly globalState: vscode.Memento
+    private readonly globalState: vscode.Memento,
+    private readonly workspaceState: vscode.Memento
   ) {
-    this.statusBar.text = "$(tools) XE7 DCC Builder";
-    this.statusBar.tooltip = "Build a Delphi XE7 Win32 project";
+    this.statusBar.text = "$(tools) Delphi DCC Builder";
+    this.statusBar.tooltip = "Build a Delphi Win32 project";
     this.statusBar.command = "delphiXe7.buildProject";
     this.statusBar.show();
   }
@@ -53,12 +67,13 @@ export class BuildCommands implements vscode.Disposable {
     const commandOptions = parseCommandOptions(argument);
     const platform = forcedPlatform ?? resolvePlatform(commandOptions.platform);
     const projectFile = await this.resolveProject(argument, commandOptions);
+    const version = this.resolveVersion(projectFile);
     const projectKey = normalizeProjectKey(projectFile);
     if (this.runners.has(projectKey)) {
       throw new Error(`A build is already running for ${path.basename(projectFile)}.`);
     }
 
-    const compilerPath = this.resolveCompilerPath(projectFile, platform);
+    const compilerPath = this.resolveCompilerPath(projectFile, platform, version);
     const action = `${rebuild ? "Rebuild" : "Build"} Project ${platform}`;
     const configuration = await this.resolveConfiguration(
       projectFile,
@@ -66,7 +81,14 @@ export class BuildCommands implements vscode.Disposable {
       action,
       platform
     );
-    const plan = await this.makePlan(projectFile, configuration, rebuild, compilerPath, platform);
+    const plan = await this.makePlan(
+      projectFile,
+      configuration,
+      rebuild,
+      compilerPath,
+      platform,
+      version
+    );
     this.diagnostics.clear(projectFile);
     this.writePlanSummary(plan, rebuild);
     this.output.show(true);
@@ -76,7 +98,8 @@ export class BuildCommands implements vscode.Disposable {
     this.updateStatusBar();
     try {
       const resource = vscode.Uri.file(projectFile);
-      const encodingSetting = vscode.workspace.getConfiguration("delphiXe7", resource)
+      const encodingSetting = vscode.workspace
+        .getConfiguration(getDelphiVersionConfiguration(version).settingsSection, resource)
         .get<OutputEncodingSetting>("outputEncoding", "system");
       const encoding = await resolveOutputEncoding(encodingSetting);
       const result = await vscode.window.withProgress({
@@ -132,14 +155,22 @@ export class BuildCommands implements vscode.Disposable {
     const commandOptions = parseCommandOptions(argument);
     const platform = resolvePlatform(commandOptions.platform);
     const projectFile = await this.resolveProject(argument, commandOptions);
-    const compilerPath = this.resolveCompilerPath(projectFile, platform);
+    const version = this.resolveVersion(projectFile);
+    const compilerPath = this.resolveCompilerPath(projectFile, platform, version);
     const configuration = await this.resolveConfiguration(
       projectFile,
       commandOptions.configuration,
       "Show Build Plan",
       platform
     );
-    const plan = await this.makePlan(projectFile, configuration, false, compilerPath, platform);
+    const plan = await this.makePlan(
+      projectFile,
+      configuration,
+      false,
+      compilerPath,
+      platform,
+      version
+    );
     const document = await vscode.workspace.openTextDocument({
       language: "json",
       content: JSON.stringify(redactBuildPlan(plan), null, 2)
@@ -150,9 +181,10 @@ export class BuildCommands implements vscode.Disposable {
   public async changeOutputPath(argument: unknown): Promise<void> {
     const commandOptions = parseCommandOptions(argument);
     const projectFile = await this.resolveProject(argument, commandOptions);
+    const version = this.resolveVersion(projectFile);
     const platform = commandOptions.platform
       ? resolvePlatform(commandOptions.platform)
-      : await this.resolveOutputPathPlatform(projectFile);
+      : await this.resolveOutputPathPlatform(projectFile, version);
     const initialContent = await this.readProjectContent(projectFile);
     const configuration = await this.resolveConfiguration(
       projectFile,
@@ -166,7 +198,7 @@ export class BuildCommands implements vscode.Disposable {
       platform
     });
     const currentOutputPath = initialEvaluation.properties.DCC_ExeOutput?.trim() || ".";
-    const historyLimit = this.resolveOutputPathHistoryLimit(projectFile);
+    const historyLimit = this.resolveOutputPathHistoryLimit(projectFile, version);
     const history = getProjectOutputPathHistory(
       this.globalState.get<unknown>(OUTPUT_PATH_HISTORY_KEY),
       projectFile,
@@ -253,11 +285,16 @@ export class BuildCommands implements vscode.Disposable {
     configuration: string,
     rebuild: boolean,
     compilerPath: string,
-    platform: DelphiPlatform
+    platform: DelphiPlatform,
+    version: DelphiVersion
   ): Promise<BuildPlan> {
     const resource = vscode.Uri.file(projectFile);
-    const settings = vscode.workspace.getConfiguration("delphiXe7", resource);
+    const settings = vscode.workspace.getConfiguration(
+      getDelphiVersionConfiguration(version).settingsSection,
+      resource
+    );
     return createBuildPlan({
+      version,
       projectFile,
       configuration,
       platform,
@@ -290,20 +327,75 @@ export class BuildCommands implements vscode.Disposable {
       throw new Error("No .dproj file was found in the workspace.");
     }
     if (projects.length === 1) {
-      return projects[0].fsPath;
+      return this.rememberProject(projects[0].fsPath);
     }
-    const selected = await vscode.window.showQuickPick(
-      projects.map((uri) => ({
-        label: vscode.workspace.asRelativePath(uri),
-        description: uri.fsPath,
-        uri
-      })),
-      { placeHolder: "Select a Delphi project" }
+
+    const items = projects.map((uri): ProjectQuickPickItem => ({
+      label: vscode.workspace.asRelativePath(uri),
+      description: uri.fsPath,
+      uri
+    }));
+    const itemsByProject = new Map(
+      items.map((item) => [normalizeProjectKey(item.uri.fsPath), item])
     );
-    if (!selected) {
-      throw new CancellationError();
-    }
-    return selected.uri.fsPath;
+    const historyItems = getProjectSelectionHistory(
+      this.workspaceState.get<unknown>(PROJECT_SELECTION_HISTORY_KEY),
+      projects.map((uri) => uri.fsPath)
+    ).flatMap((projectFile) => {
+      const item = itemsByProject.get(normalizeProjectKey(projectFile));
+      return item ? [item] : [];
+    });
+    const selected = await this.pickProject(items, historyItems);
+    return this.rememberProject(selected.uri.fsPath);
+  }
+
+  private async pickProject(
+    items: readonly ProjectQuickPickItem[],
+    historyItems: readonly ProjectQuickPickItem[]
+  ): Promise<ProjectQuickPickItem> {
+    const picker = vscode.window.createQuickPick<ProjectQuickPickItem>();
+    picker.placeholder = "Select a Delphi project";
+    picker.items = historyItems;
+
+    return new Promise<ProjectQuickPickItem>((resolve, reject) => {
+      let accepted = false;
+      const disposables = [
+        picker.onDidChangeValue((value) => {
+          picker.items = value ? items : historyItems;
+        }),
+        picker.onDidAccept(() => {
+          const selected = picker.selectedItems[0] ?? picker.activeItems[0];
+          if (!selected) {
+            return;
+          }
+          accepted = true;
+          picker.hide();
+          resolve(selected);
+        }),
+        picker.onDidHide(() => {
+          if (!accepted) {
+            reject(new CancellationError());
+          }
+          for (const disposable of disposables) {
+            disposable.dispose();
+          }
+          picker.dispose();
+        })
+      ];
+      picker.show();
+    });
+  }
+
+  private async rememberProject(projectFile: string): Promise<string> {
+    const resolved = path.resolve(projectFile);
+    await this.workspaceState.update(
+      PROJECT_SELECTION_HISTORY_KEY,
+      updateProjectSelectionHistory(
+        this.workspaceState.get<unknown>(PROJECT_SELECTION_HISTORY_KEY),
+        resolved
+      )
+    );
+    return resolved;
   }
 
   private async resolveConfiguration(
@@ -339,10 +431,14 @@ export class BuildCommands implements vscode.Disposable {
     return selected.configuration;
   }
 
-  private async resolveOutputPathPlatform(projectFile: string): Promise<DelphiPlatform> {
+  private async resolveOutputPathPlatform(
+    projectFile: string,
+    version: DelphiVersion
+  ): Promise<DelphiPlatform> {
+    const versionConfiguration = getDelphiVersionConfiguration(version);
     const compiler64Path = vscode.workspace
-      .getConfiguration("delphiXe7", vscode.Uri.file(projectFile))
-      .get<string>("compiler64Path", "")
+      .getConfiguration(versionConfiguration.settingsSection, vscode.Uri.file(projectFile))
+      .get<string>(versionConfiguration.compilerSettingNames.Win64, "")
       .trim();
     if (!compiler64Path) {
       return "Win32";
@@ -364,9 +460,15 @@ export class BuildCommands implements vscode.Disposable {
     return selected.platform;
   }
 
-  private resolveOutputPathHistoryLimit(projectFile: string): number {
+  private resolveOutputPathHistoryLimit(
+    projectFile: string,
+    version: DelphiVersion
+  ): number {
     const configured = vscode.workspace
-      .getConfiguration("delphiXe7", vscode.Uri.file(projectFile))
+      .getConfiguration(
+        getDelphiVersionConfiguration(version).settingsSection,
+        vscode.Uri.file(projectFile)
+      )
       .get<number>("outputPathHistoryLimit", DEFAULT_OUTPUT_PATH_HISTORY_LIMIT);
     if (!Number.isFinite(configured)) {
       return DEFAULT_OUTPUT_PATH_HISTORY_LIMIT;
@@ -478,16 +580,28 @@ export class BuildCommands implements vscode.Disposable {
     await writeFile(projectFile, updatedContent, "utf8");
   }
 
-  private resolveCompilerPath(projectFile: string, platform: DelphiPlatform): string {
-    const settingName = platform === "Win64" ? "compiler64Path" : "compilerPath";
+  private resolveVersion(projectFile: string): DelphiVersion {
+    const configured = vscode.workspace
+      .getConfiguration("delphiDcc", vscode.Uri.file(projectFile))
+      .get<string>("version", "XE7");
+    return resolveDelphiVersion(configured);
+  }
+
+  private resolveCompilerPath(
+    projectFile: string,
+    platform: DelphiPlatform,
+    version: DelphiVersion
+  ): string {
+    const versionConfiguration = getDelphiVersionConfiguration(version);
+    const settingName = versionConfiguration.compilerSettingNames[platform];
     const compilerName = platform === "Win64" ? "DCC64" : "DCC32";
     const compilerPath = vscode.workspace
-      .getConfiguration("delphiXe7", vscode.Uri.file(projectFile))
+      .getConfiguration(versionConfiguration.settingsSection, vscode.Uri.file(projectFile))
       .get<string>(settingName, "")
       .trim();
     if (!compilerPath) {
       throw new Error(
-        `${compilerName} compiler path is not configured. Set 'delphiXe7.${settingName}' before building.`
+        `${compilerName} compiler path is not configured. Set '${versionConfiguration.settingsSection}.${settingName}' before building.`
       );
     }
     return compilerPath;
@@ -495,7 +609,8 @@ export class BuildCommands implements vscode.Disposable {
 
   private writePlanSummary(plan: BuildPlan, rebuild: boolean): void {
     this.output.appendLine("");
-    this.output.appendLine(`=== Delphi XE7 DCC Builder ${rebuild ? "Rebuild" : "Build"}: ${path.basename(plan.projectFile)} ===`);
+    this.output.appendLine(`=== Delphi DCC Builder ${rebuild ? "Rebuild" : "Build"}: ${path.basename(plan.projectFile)} ===`);
+    this.output.appendLine(`Delphi version: ${plan.version}`);
     this.output.appendLine(`Configuration: ${plan.configuration}|${plan.platform}`);
     this.output.appendLine(`Working directory: ${plan.workingDirectory}`);
     this.output.appendLine(`Compiler: ${plan.compilerPath}`);
@@ -508,12 +623,12 @@ export class BuildCommands implements vscode.Disposable {
 
   private updateStatusBar(): void {
     if (this.runners.size > 0) {
-      this.statusBar.text = "$(sync~spin) XE7 DCC Builder";
+      this.statusBar.text = "$(sync~spin) Delphi DCC Builder";
       this.statusBar.tooltip = `${this.runners.size} Delphi build${this.runners.size === 1 ? "" : "s"} running`;
       this.statusBar.command = "delphiXe7.cancelBuild";
     } else {
-      this.statusBar.text = "$(tools) XE7 DCC Builder";
-      this.statusBar.tooltip = "Build a Delphi XE7 Win32 project";
+      this.statusBar.text = "$(tools) Delphi DCC Builder";
+      this.statusBar.tooltip = "Build a Delphi Win32 project";
       this.statusBar.command = "delphiXe7.buildProject";
     }
   }

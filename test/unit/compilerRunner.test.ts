@@ -7,6 +7,7 @@ const fixture = path.resolve("test/fixtures/Sample.dproj");
 
 function plan(overrides: Partial<BuildPlan> = {}): BuildPlan {
   return {
+    version: "XE7",
     projectFile: fixture,
     mainSource: fixture,
     compilerPath: process.execPath,

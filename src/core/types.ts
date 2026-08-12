@@ -1,4 +1,5 @@
 export type DelphiPlatform = "Win32" | "Win64";
+export type DelphiVersion = string;
 
 export interface ProjectConfiguration {
   name: string;
@@ -17,6 +18,7 @@ export interface DprojEvaluation {
 }
 
 export interface BuildPlan {
+  version: DelphiVersion;
   projectFile: string;
   mainSource: string;
   compilerPath: string;

@@ -212,7 +212,7 @@
 
 ### 阶段 10：需求确认与实现准备
 - **状态：** complete
-- 用户要求品牌改为 `Delphi XE7 DCC Builder`，增加 DCC64 路径，并仅在该路径已配置时显示 Win64 右键构建入口。
+- 用户要求品牌改为 `Delphi DCC Builder`，增加 DCC64 路径，并仅在该路径已配置时显示 Win64 右键构建入口。
 - 工作区跟踪文件干净，本地 `main` 与远程一致；未跟踪用户样本 `Untitled-1.json` 保持不修改、不打包、不提交。
 - 实现边界：DCC32 继续必填且现有 Build 命令保持 Win32；DCC64 为可选设置，新增独立 Win64 构建命令并按 Win64 dproj/注册表环境求值。
 - 本轮保持版本号 0.2.2，验收包括清单条件、平台路径、类型检查、常规测试和 VSIX 打包。
@@ -222,12 +222,12 @@
 - 已完成新品牌、package name、DCC64 设置和 Win64 命令清单修改，版本保持 0.2.2。
 - 定向验证通过：TypeScript 严格检查，以及清单、dproj、BDS 环境共 11/11 项测试。
 - 已更新中英文 README 和 Changelog，说明新品牌、DCC64 可选设置、Win64 菜单显隐、平台专用 Library Path 及命令 API。
-- 静态品牌与配置检查通过；package.json 可解析，包名为 `delphi-xe7-dcc-builder`，版本仍为 0.2.2，贡献 5 个命令。
+- 静态品牌与配置检查通过；package.json 可解析，包名为 `delphi-dcc-builder`，版本仍为 0.2.2，贡献 5 个命令。
 - 已确认本机 XE7 的 DCC64.exe 和 Win64 Library 注册表节点可用，准备执行真实 Win64 fixture 编译。
 - 已从 HKCU User Shell Folders 的 `Personal` 值派生 BDSUSERDIR，兼容重定向文档目录；对应单元断言已加入。
 - 修复后定向测试 11/11、TypeScript 检查通过；真实 XE7 集成测试 3/3 通过，其中新增 DCC64 Win64 成功编译。
 - 完整验证通过：36/36 常规测试、TypeScript 严格检查、esbuild 和 VSIX 打包；DCC64 产物 PE Machine 为 `0x8664`（x64）。
-- 已生成 `delphi-xe7-dcc-builder-0.2.2.vsix`，包内包含图标和中英文 README。
+- 已生成 `delphi-dcc-builder-0.2.2.vsix`，包内包含图标和中英文 README。
 - VSIX 内容检查确认不含用户样本 `Untitled-1.json`；文件大小 600180 字节，SHA-256 为 `A845479A5720EB8388E7938F24568FDE62CF032B5F46E8F69E1C7CA6C45D51A0`。
 - 最终静态残留检查和 `git diff --check` 通过，改动范围仅包含品牌、Win64 构建链路、测试、文档及规划记录。
 
@@ -247,7 +247,7 @@
 - 已使用 npm 标准版本命令将 package.json 与 package-lock.json 同步提升到 0.2.3，未创建 Git tag。
 - 已更新 Changelog 的 0.2.3 发布段和中文 README 的当前版本、安装命令及 VSIX 文件名；0.2.2 资源路径历史说明保持不变。
 - 0.2.3 完整验证通过：TypeScript 检查、36/36 常规测试、3/3 真实 XE7 集成测试、esbuild 和 VSIX 打包。
-- 最终 VSIX 为 `delphi-xe7-dcc-builder-0.2.3.vsix`，大小 600196 字节；内容包含图标和中英文 README，不含 `Untitled-1.json`。
+- 最终 VSIX 为 `delphi-dcc-builder-0.2.3.vsix`，大小 600196 字节；内容包含图标和中英文 README，不含 `Untitled-1.json`。
 - VSIX SHA-256：`3FB37B8C33C66F0BC65E18B0CB1D4FB930D4C76110771607F689586E23A88367`。
 - 最终版本一致性、VSIX 清单、差异范围和 `git diff --check` 均通过。
 
@@ -266,7 +266,7 @@
 - 写入器优先更新精确配置/平台组，否则在 Delphi Targets Import 前新增覆盖组；保持 CRLF 并进行 XML 转义。
 - 已打开的 dproj 通过 WorkspaceEdit 合并当前编辑器内容并保存，未打开文件写入前也会检查并发修改。
 - 完整验证通过：40/40 常规测试、3/3 真实 XE7 集成测试、TypeScript 严格检查、esbuild 和 VSIX 打包。
-- 最终 VSIX 为 `delphi-xe7-dcc-builder-0.2.3.vsix`，大小 607737 字节，版本号保持 0.2.3。
+- 最终 VSIX 为 `delphi-dcc-builder-0.2.3.vsix`，大小 607737 字节，版本号保持 0.2.3。
 - VSIX SHA-256：`9E6D0F7D93EA403702CDE523AB73F45E84F849537AF4A989A6822AA9E7110C98`；包内不含用户样本。
 
 ## 会话：2026-08-04（0.2.4 发布）
@@ -277,7 +277,7 @@
 - 已将输出路径功能从 Unreleased 归入 0.2.4，并更新中英文 README 的版本和 VSIX 文件名。
 - 已将构建命令统一为 `Build for Win32/Win64`，Rebuild 保留命令面板入口且仍不出现在右键菜单。
 - 完整验证通过：40/40 常规测试、3/3 真实 XE7 集成测试、TypeScript 严格检查、esbuild 和 VSIX 打包。
-- 最终 VSIX 为 `delphi-xe7-dcc-builder-0.2.4.vsix`，大小 607726 字节。
+- 最终 VSIX 为 `delphi-dcc-builder-0.2.4.vsix`，大小 607726 字节。
 - VSIX SHA-256：`53513BA528A3AA611162D307896BCD7F9B470FFDD141A23C5374B31E6BA84258`。
 - 最终差异审查和 `git diff --check` 通过，发布变更提交并推送到 `origin/main`。
 
@@ -296,7 +296,7 @@
 - 定向验证通过：dproj 历史与清单测试 11/11，TypeScript 严格检查和 `git diff --check` 通过。
 - 更新阶段记录时首次补丁分段标记错误，重新读取锚点后已正确更新，源码未受影响。
 - 完整验证通过：44/44 常规测试、3/3 真实 XE7 集成测试、TypeScript 严格检查、esbuild 和 VSIX 打包。
-- 重新生成的 `delphi-xe7-dcc-builder-0.2.4.vsix` 大小为 609567 字节。
+- 重新生成的 `delphi-dcc-builder-0.2.4.vsix` 大小为 609567 字节。
 - VSIX SHA-256：`FBEB34B1936750223453A4BA615A3DDBCD34DB2258D4F4681097EAF1AA205DFF`。
 - 最终差异范围和 `git diff --check` 通过；本轮未提升版本、未提交或推送。
 
@@ -310,6 +310,6 @@
 - 已使用 npm 标准版本命令将 package.json 与 package-lock.json 同步提升到 0.2.5，未创建 Git tag。
 - 已将输出路径历史修复从 Unreleased 归入 0.2.5，并更新中英文 README 的当前版本和 VSIX 文件名。
 - 完整验证通过：44/44 常规测试、3/3 真实 XE7 集成测试、TypeScript 严格检查、esbuild 和 VSIX 打包。
-- 最终 VSIX 为 `delphi-xe7-dcc-builder-0.2.5.vsix`，大小 609563 字节，包内 manifest 版本为 0.2.5。
+- 最终 VSIX 为 `delphi-dcc-builder-0.2.5.vsix`，大小 609563 字节，包内 manifest 版本为 0.2.5。
 - VSIX SHA-256：`0AD819B9565E99ED9683BC217397110B9CF6F59D6DBF91D451E8E3303B1D0664`。
 - 最终版本一致性、完整差异审查和 `git diff --check` 均通过；发布变更提交并推送到 `origin/main`。

@@ -1,7 +1,13 @@
 # Change Log
 
+## 0.2.6
+
+- Rename the public extension brand to Delphi DCC Builder, add the XE7 version selector, and move version-specific BDS/DCC mappings into documented JSON configuration files.
+- Set the extension author to Alex Niu and use the existing 1847bell Marketplace publisher.
+
 ## 0.2.5
 
+- Keep up to 10 recently selected `.dproj` files per workspace while retaining keyword search across all workspace projects.
 - Keep both the previous and new output paths after a successful change and isolate history by normalized `.dproj` path.
 - Add `delphiXe7.outputPathHistoryLimit`, defaulting to 5 entries per project with a supported range of 1-15.
 
@@ -13,7 +19,7 @@
 
 ## 0.2.3
 
-- Rename the extension and its user-facing labels to Delphi XE7 DCC Builder while preserving existing command and setting identifiers.
+- Rename the extension and its user-facing labels to Delphi DCC Builder while preserving existing command and setting identifiers.
 - Add an optional DCC64 compiler path and a Win64 Explorer build command that is visible only when the path is configured.
 - Evaluate Win64 dproj conditions and read the BDS 15.0 Win64 Library and Debug DCU paths for DCC64 builds.
 

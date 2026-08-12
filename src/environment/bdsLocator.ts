@@ -2,11 +2,13 @@ import { access, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import iconv from "iconv-lite";
-import { DelphiPlatform } from "../core/types";
+import { DelphiPlatform, DelphiVersion } from "../core/types";
+import {
+  DEFAULT_DELPHI_VERSION,
+  getDelphiVersionConfiguration
+} from "../delphi/versions";
 import { expandProperties, PropertyBag } from "../project/propertyResolver";
 import { queryRegistry } from "./registryReader";
-
-const BDS_KEY = "Software\\Embarcadero\\BDS\\15.0";
 
 export interface BdsEnvironment {
   rootDir: string;
@@ -20,14 +22,17 @@ export interface BdsEnvironment {
 export async function resolveBdsEnvironment(
   compilerOverride: string | undefined,
   environmentOverrides: Record<string, string> = {},
-  platform: DelphiPlatform = "Win32"
+  platform: DelphiPlatform = "Win32",
+  version: DelphiVersion = DEFAULT_DELPHI_VERSION
 ): Promise<BdsEnvironment> {
+  const versionConfiguration = getDelphiVersionConfiguration(version);
+  const bdsKey = `Software\\Embarcadero\\BDS\\${versionConfiguration.bdsRegistryVersion}`;
   const warnings: string[] = [];
-  const userRoot = await readRoot("HKCU");
-  const machineRoot = await readRoot("HKLM");
+  const userRoot = await readRoot("HKCU", bdsKey);
+  const machineRoot = await readRoot("HKLM", bdsKey);
   const registryRoot = userRoot || machineRoot;
-  const fallbackRoot = defaultRootDirectory();
-  const compilerName = platform === "Win64" ? "DCC64.exe" : "DCC32.exe";
+  const fallbackRoot = defaultRootDirectory(versionConfiguration.studioDirectoryVersion);
+  const compilerName = versionConfiguration.compilerFileNames[platform];
 
   const compilerPath = compilerOverride?.trim()
     ? path.resolve(compilerOverride.trim())
@@ -41,11 +46,11 @@ export async function resolveBdsEnvironment(
     || fallbackRoot;
 
   const rsVars = await readRsVars(rootDir);
-  const bdsUserDir = await readBdsUserDirectory();
+  const bdsUserDir = await readBdsUserDirectory(versionConfiguration.studioDirectoryVersion);
 
   const registryVariables = {
-    ...await queryRegistry(`HKLM\\${BDS_KEY}\\Environment Variables`),
-    ...await queryRegistry(`HKCU\\${BDS_KEY}\\Environment Variables`)
+    ...await queryRegistry(`HKLM\\${bdsKey}\\Environment Variables`),
+    ...await queryRegistry(`HKCU\\${bdsKey}\\Environment Variables`)
   };
   const derivedVariables: Record<string, string> = {
     BDS: rootDir,
@@ -61,8 +66,8 @@ export async function resolveBdsEnvironment(
   );
 
   const libraryValues = {
-    ...await queryRegistry(`HKLM\\${BDS_KEY}\\Library\\${platform}`),
-    ...await queryRegistry(`HKCU\\${BDS_KEY}\\Library\\${platform}`)
+    ...await queryRegistry(`HKLM\\${bdsKey}\\Library\\${platform}`),
+    ...await queryRegistry(`HKCU\\${bdsKey}\\Library\\${platform}`)
   };
   const libraryPropertyBag = new PropertyBag({ ...process.env, ...variables, Platform: platform });
   const expandedLibraryPath = expandBdsPath(libraryValues["Search Path"] ?? "", libraryPropertyBag);
@@ -74,13 +79,17 @@ export async function resolveBdsEnvironment(
   const debugDcuPath = expandedDebugDcuPath.value;
 
   if (!registryRoot && !compilerOverride?.trim()) {
-    warnings.push("BDS 15.0 RootDir was not found in the 32-bit registry view; using the default XE7 path.");
+    warnings.push(
+      `BDS ${versionConfiguration.bdsRegistryVersion} RootDir was not found in the 32-bit registry view; using the default ${version} path.`
+    );
   }
   if (!await exists(compilerPath)) {
     warnings.push(`${compilerName} was not found: ${compilerPath}`);
   }
   if (!libraryPath) {
-    warnings.push(`The BDS 15.0 ${platform} Library Search Path was not found in the registry.`);
+    warnings.push(
+      `The BDS ${versionConfiguration.bdsRegistryVersion} ${platform} Library Search Path was not found in the registry.`
+    );
   }
   for (const name of expandedLibraryPath.unresolved) {
     warnings.push(`Unresolved BDS Library Path property: $(${name}).`);
@@ -101,12 +110,12 @@ function expandBdsPath(value: string, properties: PropertyBag): ReturnType<typeo
   return expandProperties(expandPercentValue(value, properties), properties);
 }
 
-async function readRoot(hive: "HKCU" | "HKLM"): Promise<string> {
-  const values = await queryRegistry(`${hive}\\${BDS_KEY}`, "RootDir");
+async function readRoot(hive: "HKCU" | "HKLM", bdsKey: string): Promise<string> {
+  const values = await queryRegistry(`${hive}\\${bdsKey}`, "RootDir");
   return values.RootDir?.replace(/[\\/]+$/, "") ?? "";
 }
 
-async function readBdsUserDirectory(): Promise<string> {
+async function readBdsUserDirectory(studioDirectoryVersion: string): Promise<string> {
   const values = await queryRegistry(
     "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders",
     "Personal"
@@ -114,12 +123,12 @@ async function readBdsUserDirectory(): Promise<string> {
   const documents = values.Personal?.trim()
     ? expandPercentValue(values.Personal.trim(), new PropertyBag(process.env))
     : path.join(os.homedir(), "Documents");
-  return path.join(documents, "Embarcadero", "Studio", "15.0");
+  return path.join(documents, "Embarcadero", "Studio", studioDirectoryVersion);
 }
 
-function defaultRootDirectory(): string {
+function defaultRootDirectory(studioDirectoryVersion: string): string {
   const programFiles = process.env["ProgramFiles(x86)"] ?? process.env.ProgramFiles ?? "C:\\Program Files (x86)";
-  return path.join(programFiles, "Embarcadero", "Studio", "15.0");
+  return path.join(programFiles, "Embarcadero", "Studio", studioDirectoryVersion);
 }
 
 function inferRootFromCompiler(compilerPath: string): string | undefined {

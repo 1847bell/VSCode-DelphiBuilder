@@ -1,8 +1,8 @@
-# Delphi XE7 DCC Builder
+# Delphi DCC Builder
 
-通过 Visual Studio Code 直接调用 `DCC32.exe` 或 `DCC64.exe`，编译 Delphi XE7 Win32、Win64 项目。
+通过 Visual Studio Code 直接调用 `DCC32.exe` 或 `DCC64.exe` 编译 Delphi Win32、Win64 项目。目前支持 Delphi XE7，并已将版本配置与通用构建流程分离，便于后续扩展其他版本。
 
-当前版本：`0.2.5`
+当前版本：`0.2.6`
 
 ## 功能
 
@@ -24,10 +24,10 @@
 使用 VS Code 命令行安装打包好的 VSIX：
 
 ```powershell
-code --install-extension "D:\OthCode\DelphiBuilder\delphi-xe7-dcc-builder-0.2.5.vsix"
+code --install-extension "D:\OthCode\DelphiBuilder\delphi-dcc-builder-0.2.6.vsix"
 ```
 
-也可以在 VS Code 扩展视图右上角菜单中选择“从 VSIX 安装...”，然后选择 `delphi-xe7-dcc-builder-0.2.5.vsix`。
+也可以在 VS Code 扩展视图右上角菜单中选择“从 VSIX 安装...”，然后选择 `delphi-dcc-builder-0.2.6.vsix`。
 
 安装或更新后，建议重新加载 VS Code 窗口。
 
@@ -50,20 +50,22 @@ Rebuild 仍可从命令面板执行，但不占用右键菜单。Show Build Plan
 
 右键 `.dproj` 执行 `Delphi DCC Builder: Change Output Path` 后，扩展会按构建流程选择平台和配置。输入框预填当前有效的 `DCC_ExeOutput`；修改成功后，修改前地址和新地址都会进入该 dproj 的历史记录。历史按规范化后的 dproj 完整路径隔离，默认保留最近 5 条，可配置为 1-15 条。确认后会立即保存 `.dproj`，并写入所选 `配置|平台` 的专用覆盖项，因此修改 `Release|Win32` 不会影响 Debug 或 Win64。
 
-状态栏中的 `XE7 DCC Builder` 按钮用于启动 Win32 编译；编译期间按钮会变为运行状态，单击可取消编译。
+状态栏中的 `Delphi DCC Builder` 按钮用于启动 Win32 编译；编译期间按钮会变为运行状态，单击可取消编译。
 
 ## 推荐使用流程
 
 1. 使用 VS Code 打开包含 `.dproj` 的工作区。
 2. 将工作区标记为 Trusted Workspace。执行编译时必须信任工作区。
 3. 显式设置 `delphiXe7.compilerPath`；需要 Win64 时再设置 `delphiXe7.compiler64Path`。
-4. 首次使用可从命令面板执行 `Delphi XE7 DCC Builder: Show Build Plan`。
+4. 首次使用可从命令面板执行 `Delphi DCC Builder: Show Build Plan`。
 5. 检查 `compilerPath`、`workingDirectory`、配置、平台、搜索路径和输出目录。
 6. 确认 Build Plan 中没有未解析宏或关键警告。
 7. 右键 `.dproj` 执行 Build，并选择项目实际声明的配置。
 8. 在 Output 面板查看完整 DCC 输出，在 Problems 面板查看可跳转的诊断。
 
 当工作区中存在多个 `.dproj` 时，扩展会弹出项目选择列表。项目选择优先级为：
+
+项目选择列表按当前 VS Code 工作区保存最近使用记录，初始最多显示 10 个项目；新工作区没有历史时列表为空，输入关键字后仍会搜索当前工作区内的全部 `.dproj`。
 
 ```text
 命令参数或右键选择的 .dproj
@@ -77,6 +79,7 @@ Rebuild 仍可从命令面板执行，但不占用右键菜单。Show Build Plan
 
 ```json
 {
+  "delphiDcc.version": "XE7",
   "delphiXe7.compilerPath": "D:\\Program Files (x86)\\Embarcadero\\Studio\\15.0\\bin\\DCC32.exe",
   "delphiXe7.compiler64Path": "D:\\Program Files (x86)\\Embarcadero\\Studio\\15.0\\bin\\DCC64.exe",
   "delphiXe7.showBuildPlanMenu": "hide",
@@ -89,6 +92,7 @@ Rebuild 仍可从命令面板执行，但不占用右键菜单。Show Build Plan
 
 | 设置项 | 默认值 | 说明 |
 |--------|--------|------|
+| `delphiDcc.version` | `XE7` | Delphi 版本下拉选择；当前仅支持 XE7 |
 | `delphiXe7.compilerPath` | 空 | 必填，`DCC32.exe` 的绝对路径；为空时构建报错 |
 | `delphiXe7.compiler64Path` | 空 | 可选，`DCC64.exe` 的绝对路径；非空时显示 Win64 右键构建命令 |
 | `delphiXe7.showBuildPlanMenu` | `hide` | `.dproj` 右键菜单是否显示 Show Build Plan，可选 `hide`、`show` |
@@ -163,6 +167,31 @@ Build Plan 是扩展最终交给编译器的构建描述，主要包含：
 - 部署、签名和安装包生成
 
 扩展不会执行 `.dproj` 中的 MSBuild `Import` 或 `Target`。遇到未支持内容时会写入 Build Plan 警告，不会静默忽略。
+
+## Delphi 版本配置文件
+
+不同 Delphi 版本的 BDS 信息和 DCC 命令映射保存在仓库根目录的 `delphi-versions/` 中。目前使用 `delphi-versions/XE7.json`，字段格式由 `delphi-versions/schema.json` 定义，可在支持 JSON Schema 的编辑器中直接校验和补全。
+
+每个版本配置文件包含：
+
+- BDS 注册表版本和 Studio 目录版本
+- Win32、Win64 编译器文件名及对应的 VS Code 设置名称
+- 基础参数和 Rebuild 参数
+- Unit、Include、Resource 搜索路径及运行时包开关
+- `.dproj` 普通值属性和路径属性到 DCC 开关的映射
+- 有顺序的布尔值、枚举值参数规则
+- 已识别但无需生成命令行参数的 DCC 元数据属性
+
+`dcc.argumentRules` 的数组顺序就是生成 DCC 参数的顺序；某个值对应空数组表示识别该值但不生成参数。
+
+新增 Delphi 版本时：
+
+1. 复制 `delphi-versions/XE7.json`，修改版本号、BDS 信息和 DCC 参数映射。
+2. 在 `package.json` 的 `delphiDcc.version` 中同步增加 `enum` 和 `enumItemLabels`。VS Code 的设置下拉来自静态扩展清单，不能在运行时动态增加。
+3. 按配置文件中的 `settingsSection`、`compilerSettingNames` 在 `package.json` 增加对应版本的编译器路径设置。
+4. 增加单元测试，并使用真实编译器完成 Win32/Win64 集成验证后再声明支持该版本。
+
+运行时会自动发现 `delphi-versions/` 下除 `schema.json` 外的所有 JSON 配置。只有当新编译器的行为无法用现有 Schema 表达时，才需要修改 TypeScript 通用构建逻辑。
 
 ## 常见问题
 
@@ -245,7 +274,7 @@ Win64 入口只在 `delphiXe7.compiler64Path` 非空时显示。请将其设置�
 
 ### 编译失败但 Problems 面板为空
 
-完整原始输出始终保留在 `Delphi XE7 DCC Builder` Output Channel 中。没有文件名和行号的全局错误无法发布为可跳转诊断，但仍会显示在输出面板和失败通知中。
+完整原始输出始终保留在 `Delphi DCC Builder` Output Channel 中。没有文件名和行号的全局错误无法发布为可跳转诊断，但仍会显示在输出面板和失败通知中。
 
 ## 开发
 

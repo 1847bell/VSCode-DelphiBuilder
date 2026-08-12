@@ -1,10 +1,11 @@
 {
-  "name": "delphi-xe7-dcc-builder",
-  "displayName": "Delphi XE7 DCC Builder",
-  "description": "Build Delphi XE7 Win32 and Win64 projects with DCC32 and DCC64 from Visual Studio Code.",
-  "version": "0.2.5",
+  "name": "delphi-dcc-builder",
+  "displayName": "Delphi DCC Builder",
+  "description": "Build Delphi Win32 and Win64 projects with DCC32 and DCC64 from Visual Studio Code.",
+  "version": "0.2.6",
   "icon": "images/icon.png",
-  "publisher": "local",
+  "publisher": "1847bell",
+  "author": "Alex Niu",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -85,8 +86,20 @@
       ]
     },
     "configuration": {
-      "title": "Delphi XE7 DCC Builder",
+      "title": "Delphi DCC Builder",
       "properties": {
+        "delphiDcc.version": {
+          "type": "string",
+          "enum": [
+            "XE7"
+          ],
+          "enumItemLabels": [
+            "Delphi XE7"
+          ],
+          "default": "XE7",
+          "scope": "resource",
+          "description": "Delphi compiler version used to resolve version-specific build settings and BDS environment values."
+        },
         "delphiXe7.compilerPath": {
           "type": "string",
           "default": "",
@@ -148,7 +161,7 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Environment variables applied to DCC32 or DCC64 after the XE7 registry environment."
+          "description": "Environment variables applied to DCC32 or DCC64 after the selected Delphi version's registry environment."
         }
       }
     }

@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Delphi DCC Builder version configuration",
+  "type": "object",
+  "required": [
+    "version",
+    "displayName",
+    "bdsRegistryVersion",
+    "studioDirectoryVersion",
+    "settingsSection",
+    "compilerSettingNames",
+    "compilerFileNames",
+    "dcc"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "type": "string", "minLength": 1 },
+    "displayName": { "type": "string", "minLength": 1 },
+    "bdsRegistryVersion": { "type": "string", "minLength": 1 },
+    "studioDirectoryVersion": { "type": "string", "minLength": 1 },
+    "settingsSection": { "type": "string", "minLength": 1 },
+    "compilerSettingNames": { "$ref": "#/$defs/platformStrings" },
+    "compilerFileNames": { "$ref": "#/$defs/platformStrings" },
+    "dcc": {
+      "type": "object",
+      "required": [
+        "baseArguments",
+        "rebuildArguments",
+        "specialSwitches",
+        "valueSwitches",
+        "pathSwitches",
+        "argumentRules",
+        "knownMetadata"
+      ],
+      "properties": {
+        "baseArguments": { "$ref": "#/$defs/stringArray" },
+        "rebuildArguments": { "$ref": "#/$defs/stringArray" },
+        "specialSwitches": {
+          "type": "object",
+          "required": ["unitSearchPath", "includePath", "resourcePath", "runtimePackages"],
+          "additionalProperties": { "type": "string" }
+        },
+        "valueSwitches": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "pathSwitches": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["switch", "kind"],
+            "properties": {
+              "switch": { "type": "string" },
+              "kind": { "enum": ["single", "list"] }
+            },
+            "additionalProperties": false
+          }
+        },
+        "argumentRules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["property", "kind", "values"],
+            "properties": {
+              "property": { "type": "string" },
+              "kind": { "enum": ["boolean", "enum"] },
+              "values": {
+                "type": "object",
+                "additionalProperties": { "$ref": "#/$defs/stringArray" }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "knownMetadata": { "$ref": "#/$defs/stringArray" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "stringArray": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "platformStrings": {
+      "type": "object",
+      "required": ["Win32", "Win64"],
+      "properties": {
+        "Win32": { "type": "string" },
+        "Win64": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

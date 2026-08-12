@@ -2,7 +2,7 @@
 
 以下按 **VS Code 扩展**规划，不是 Visual Studio 扩展。扩展最终打包为 `.vsix`，只支持 Windows、Delphi XE7/BDS 15.0 和 DCC32。
 
-# VS Code Delphi XE7 编译扩展开发手册
+# VS Code Delphi DCC Builder 扩展开发手册
 
 版本：规划稿 v0.1  
 建议扩展名：`delphi-xe7-build`  
@@ -40,9 +40,9 @@
 资源管理器右键 `.dproj`：
 
 ```text
-Delphi XE7: Build Project
-Delphi XE7: Rebuild Project
-Delphi XE7: Show Build Plan
+Delphi DCC Builder: Build Project
+Delphi DCC Builder: Rebuild Project
+Delphi DCC Builder: Show Build Plan
 ```
 
 命令面板执行时：

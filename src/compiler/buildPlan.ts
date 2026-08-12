@@ -1,10 +1,12 @@
 import path from "node:path";
-import { BuildPlan, DelphiPlatform, DprojEvaluation } from "../core/types";
+import { BuildPlan, DelphiPlatform, DelphiVersion, DprojEvaluation } from "../core/types";
+import { DEFAULT_DELPHI_VERSION } from "../delphi/versions";
 import { resolveBdsEnvironment } from "../environment/bdsLocator";
 import { evaluateDprojFile } from "../project/dprojParser";
 import { buildDccArguments } from "./dccArgumentBuilder";
 
 export interface CreateBuildPlanOptions {
+  version?: DelphiVersion;
   projectFile: string;
   configuration?: string;
   platform?: DelphiPlatform;
@@ -16,8 +18,14 @@ export interface CreateBuildPlanOptions {
 
 export async function createBuildPlan(options: CreateBuildPlanOptions): Promise<BuildPlan> {
   const projectFile = path.resolve(options.projectFile);
+  const version = options.version ?? DEFAULT_DELPHI_VERSION;
   const platform = options.platform ?? "Win32";
-  const bds = await resolveBdsEnvironment(options.compilerPath, options.environment, platform);
+  const bds = await resolveBdsEnvironment(
+    options.compilerPath,
+    options.environment,
+    platform,
+    version
+  );
   const inheritedEnvironment = Object.fromEntries(
     Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined)
   );
@@ -35,6 +43,7 @@ export async function createBuildPlan(options: CreateBuildPlanOptions): Promise<
     }
   });
   const dcc = buildDccArguments(evaluation, {
+    version,
     rebuild: options.rebuild,
     libraryPath: bds.libraryPath,
     debugDcuPath: bds.debugDcuPath,
@@ -42,6 +51,7 @@ export async function createBuildPlan(options: CreateBuildPlanOptions): Promise<
   });
 
   return {
+    version,
     projectFile,
     mainSource: evaluation.mainSource,
     compilerPath: bds.compilerPath,
