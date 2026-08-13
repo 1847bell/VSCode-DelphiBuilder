@@ -46,6 +46,8 @@ The order of `dcc.argumentRules` is the emitted DCC argument order. Empty arrays
 
 To add a Delphi version, copy `XE7.json`, update its version/BDS data and DCC mappings, then add the version to the `delphiDcc.version` `enum` and `enumItemLabels` in `package.json`. Add the corresponding compiler path settings referenced by `settingsSection` and `compilerSettingNames`. The runtime discovers every JSON file in `delphi-versions/` except `schema.json`; TypeScript changes are only needed when a compiler requires behavior that cannot be represented by the existing configuration schema. Add unit tests and a real compiler integration test before declaring a version supported.
 
+See `docs/DELPHI_VERSION_CONFIGURATION.md` for the complete contributor handbook, including every schema field, argument ordering, VS Code manifest registration, testing, packaging, and troubleshooting steps.
+
 ## Development
 
 ```powershell
@@ -55,5 +57,3 @@ npm run check
 npm run compile
 npm run package
 ```
-
-Press `F5` in VS Code to launch an Extension Development Host.

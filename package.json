@@ -6,6 +6,10 @@
   "icon": "images/icon.png",
   "publisher": "1847bell",
   "author": "Alex Niu",
+  "repository": {
+    "type": "git",
+    "url": "https://git.1847bell.xyz/1847bell/DelphiBuilder.git"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },

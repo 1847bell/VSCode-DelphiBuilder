@@ -7,6 +7,7 @@ coverage/**
 *.md
 !README.md
 !README_CN.md
+!docs/DELPHI_VERSION_CONFIGURATION.md
 Untitled-*.json
 tsconfig.json
 vitest.config.ts
