@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.2.7
+
+- Point the Marketplace repository and issue links to the public GitHub repository.
+
 ## 0.2.6
 
 - Rename the public extension brand to Delphi DCC Builder, add the XE7 version selector, and move version-specific BDS/DCC mappings into documented JSON configuration files.

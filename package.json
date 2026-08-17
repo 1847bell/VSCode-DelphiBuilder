@@ -2,13 +2,16 @@
   "name": "delphi-dcc-builder",
   "displayName": "Delphi DCC Builder",
   "description": "Build Delphi Win32 and Win64 projects with DCC32 and DCC64 from Visual Studio Code.",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "icon": "images/icon.png",
   "publisher": "1847bell",
   "author": "Alex Niu",
   "repository": {
     "type": "git",
-    "url": "https://git.1847bell.xyz/1847bell/DelphiBuilder.git"
+    "url": "https://github.com/1847bell/VSCode-DelphiBuilder.git"
+  },
+  "bugs": {
+    "url": "https://github.com/1847bell/VSCode-DelphiBuilder/issues"
   },
   "engines": {
     "vscode": "^1.85.0"
