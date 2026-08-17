@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import {
   BuildPlan,
@@ -68,7 +69,7 @@ export async function createBuildPlan(options: CreateBuildPlanOptions): Promise<
     ...evaluation.warnings,
     ...dcc.warnings
   ])];
-  const resourceBuild = await createResourceBuildPlan(
+  const resourcePlan = await createResourcePlan(
     evaluation,
     bds,
     options,
@@ -85,37 +86,43 @@ export async function createBuildPlan(options: CreateBuildPlanOptions): Promise<
     platform,
     environment,
     arguments: dcc.arguments,
-    resourceBuild,
+    projectResource: resourcePlan.projectResource,
+    resourceBuild: resourcePlan.resourceBuild,
     expectedArtifacts: locateExpectedArtifacts(evaluation),
     warnings
   };
 }
 
-async function createResourceBuildPlan(
+async function createResourcePlan(
   evaluation: DprojEvaluation,
   bds: BdsEnvironment,
   options: CreateBuildPlanOptions,
   warnings: string[]
-): Promise<ResourceBuildStep[] | undefined> {
-  if (evaluation.resourceItems.length === 0) {
-    return undefined;
-  }
-  if (options.resourceBuild === false) {
-    warnings.push(
-      `Resource preprocessing is disabled; existing .res files are required for: ${evaluation.resourceItems.map((item) => item.include).join(", ")}`
-    );
-    return undefined;
-  }
-
+): Promise<Pick<BuildPlan, "projectResource" | "resourceBuild">> {
+  const projectResource = await findWildcardProjectResource(evaluation.mainSource);
   const rcCompileItems = evaluation.resourceItems.filter((item) => item.kind === "RcCompile");
   const rcItems = evaluation.resourceItems.filter((item) => item.kind === "RcItem");
+  if (!projectResource && evaluation.resourceItems.length === 0) {
+    return {};
+  }
+  if (options.resourceBuild === false) {
+    const required = [
+      ...evaluation.resourceItems.map((item) => item.include),
+      ...(projectResource ? [projectResource.output] : [])
+    ];
+    warnings.push(
+      `Resource preprocessing is disabled; existing .res files are required for: ${required.join(", ")}`
+    );
+    return {};
+  }
+
   if (rcItems.length > 0) {
     warnings.push(
       `Direct resource preprocessing does not generate RcItem project resources; existing project resources are required for: ${rcItems.map((item) => item.include).join(", ")}`
     );
   }
   if (rcCompileItems.length === 0) {
-    return undefined;
+    return rcItems.length === 0 ? { projectResource } : {};
   }
 
   const compilerToUse = evaluation.properties.BRCC_CompilerToUse?.trim();
@@ -188,7 +195,7 @@ async function createResourceBuildPlan(
     }
   }
 
-  return rcCompileItems.map((item) => {
+  const resourceBuild = rcCompileItems.map((item) => {
     const input = resolveProjectPath(item.include, projectDirectory);
     const output = path.join(
       outputDirectory,
@@ -201,6 +208,31 @@ async function createResourceBuildPlan(
       output
     };
   });
+  return {
+    projectResource: rcItems.length === 0 ? projectResource : undefined,
+    resourceBuild
+  };
+}
+
+async function findWildcardProjectResource(
+  mainSource: string
+): Promise<BuildPlan["projectResource"]> {
+  let content: string;
+  try {
+    content = await readFile(mainSource, "latin1");
+  } catch {
+    return undefined;
+  }
+  if (!/\{\$\s*(?:R|RESOURCE)\s+\*\.res\s*\}/i.test(content)) {
+    return undefined;
+  }
+  return {
+    output: path.join(
+      path.dirname(mainSource),
+      `${path.basename(mainSource, path.extname(mainSource))}.res`
+    ),
+    createIfMissing: true
+  };
 }
 
 function mergeDelimitedValues(...values: Array<string | undefined>): string[] {

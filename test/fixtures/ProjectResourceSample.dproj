@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectVersion>15.0</ProjectVersion>
+    <MainSource>ProjectResourceSample.dpr</MainSource>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Base)'!=''">
+    <DCC_ExeOutput>.\bin\$(Config)</DCC_ExeOutput>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Cfg_1)'!='' and '$(Platform)'=='Win32'">
+    <DCC_DcuOutput>.\dcu\Win32\Debug</DCC_DcuOutput>
+  </PropertyGroup>
+  <ItemGroup>
+    <BuildConfiguration Include="Base">
+      <Key>Base</Key>
+    </BuildConfiguration>
+    <BuildConfiguration Include="Debug">
+      <Key>Cfg_1</Key>
+      <CfgParent>Base</CfgParent>
+    </BuildConfiguration>
+  </ItemGroup>
+  <Import Project="$(BDS)\Bin\CodeGear.Delphi.Targets" />
+</Project>

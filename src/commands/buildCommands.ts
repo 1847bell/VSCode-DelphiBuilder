@@ -628,6 +628,9 @@ export class BuildCommands implements vscode.Disposable {
     this.output.appendLine(`Working directory: ${plan.workingDirectory}`);
     this.output.appendLine(`Compiler: ${plan.compilerPath}`);
     this.output.appendLine(`Arguments: ${plan.arguments.map(quoteForDisplay).join(" ")}`);
+    if (plan.projectResource) {
+      this.output.appendLine(`Project resource: ${plan.projectResource.output} (created only when missing)`);
+    }
     if (plan.resourceBuild) {
       for (const step of plan.resourceBuild) {
         this.output.appendLine(`Resource builder: ${step.executable}`);

@@ -2,7 +2,7 @@
 
 Build Delphi Win32 and Win64 projects from Visual Studio Code by invoking `DCC32.exe` or `DCC64.exe` directly. Delphi XE7 is currently supported, with version-specific build configuration isolated for future compiler versions.
 
-Current version: `0.2.8`
+Current version: `0.2.9`
 
 ## Commands
 
@@ -15,7 +15,7 @@ Current version: `0.2.8`
 
 Select the compiler version with `delphiDcc.version`; the only current option is `XE7`. `delphiXe7.compilerPath` is required for Win32. `delphiXe7.compiler64Path` is optional; when it is non-empty, the `.dproj` Explorer context menu includes **Build for Win64**. Each build reads the project and prompts for one of its declared configurations. Rebuild remains available for Win32 from the Command Palette. **Show Build Plan** is always available from the Command Palette and can be enabled in the Explorer context menu with `delphiXe7.showBuildPlanMenu`.
 
-Projects containing `.dproj` `RcCompile` items are preprocessed with `BRCC32.exe` before DCC, so a clean checkout does not require a prior IDE build to create `.res` files. This is enabled by `delphiDcc.resourceBuild`. `delphiXe7.rsvarsPath` and `delphiXe7.brcc32Path` are optional overrides; when empty, the extension discovers them from the configured compiler, BDS installation, and environment. Project-level `RcItem` generation is not emulated and is reported as a Build Plan warning when encountered.
+Resource preprocessing is enabled by `delphiDcc.resourceBuild`. Projects containing `.dproj` `RcCompile` items are compiled with `BRCC32.exe` before DCC. When the main `.dpr` or `.dpk` contains `{$R *.res}` but the matching project `.res` is missing, the extension creates a minimal valid project resource before DCC and never overwrites an existing file. `delphiXe7.rsvarsPath` and `delphiXe7.brcc32Path` are optional BRCC32 discovery overrides. Project-level `RcItem` generation is not emulated and is reported as a Build Plan warning when encountered.
 
 When a workspace contains multiple `.dproj` files, the project picker initially shows up to 10 recently used projects for that workspace. A workspace with no history starts with an empty list; typing still searches all `.dproj` files in the open workspace.
 
@@ -28,7 +28,7 @@ Right-click a `.dproj` and select **Change Output Path** to edit the effective `
 - Debug, Release and project-defined configurations
 - Platform-specific BDS 15.0 Library Path and Debug DCU Path expansion
 
-Imported MSBuild targets and build events are not executed. `RcCompile` resources are the limited exception: the extension invokes BDS `BRCC32.exe` directly with the evaluated BRCC/DCC defines, include paths, code page, language, suffix, and output directory. Unsupported project properties are reported in the Build Plan warnings so they are not silently ignored.
+Imported MSBuild targets and build events are not executed. Resource preprocessing is limited to missing wildcard project resources and `RcCompile` items. The extension invokes BDS `BRCC32.exe` for `RcCompile` with the evaluated BRCC/DCC defines, include paths, code page, language, suffix, and output directory. Unsupported project properties are reported in the Build Plan warnings so they are not silently ignored.
 
 ## Delphi version configurations
 

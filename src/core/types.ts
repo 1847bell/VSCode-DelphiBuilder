@@ -31,6 +31,11 @@ export interface ResourceBuildStep {
   output: string;
 }
 
+export interface ProjectResourceBuildStep {
+  output: string;
+  createIfMissing: true;
+}
+
 export interface BuildPlan {
   version: DelphiVersion;
   projectFile: string;
@@ -41,6 +46,7 @@ export interface BuildPlan {
   platform: DelphiPlatform;
   environment: Record<string, string>;
   arguments: string[];
+  projectResource?: ProjectResourceBuildStep;
   resourceBuild?: ResourceBuildStep[];
   expectedArtifacts: string[];
   warnings: string[];

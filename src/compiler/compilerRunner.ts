@@ -1,5 +1,5 @@
 import { ChildProcessWithoutNullStreams, spawn } from "node:child_process";
-import { access, mkdir } from "node:fs/promises";
+import { access, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { finished } from "node:stream/promises";
 import iconv from "iconv-lite";
@@ -38,6 +38,11 @@ export class CompilerRunner {
       output.push(text);
       onOutput(text);
     };
+
+    if (plan.projectResource) {
+      const created = await ensureProjectResource(plan.projectResource.output);
+      capture(`[Project Resource] ${created ? "Created" : "Using existing"} ${plan.projectResource.output}\n`);
+    }
 
     for (const step of plan.resourceBuild ?? []) {
       capture(`[Resource Build] ${path.basename(step.input)}\n`);
@@ -162,5 +167,35 @@ async function prepareOutputDirectories(plan: BuildPlan): Promise<void> {
   for (const step of plan.resourceBuild ?? []) {
     directories.add(path.dirname(step.output));
   }
+  if (plan.projectResource) {
+    directories.add(path.dirname(plan.projectResource.output));
+  }
   await Promise.all([...directories].map((directory) => mkdir(directory, { recursive: true })));
 }
+
+async function ensureProjectResource(output: string): Promise<boolean> {
+  try {
+    await access(output);
+    return false;
+  } catch {
+    // Continue and create the missing project resource without replacing an existing file.
+  }
+  try {
+    await writeFile(output, MINIMAL_PROJECT_RESOURCE, { flag: "wx" });
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+      return false;
+    }
+    throw error;
+  }
+}
+
+// Standard empty Win32 .res null header.
+const MINIMAL_PROJECT_RESOURCE = Buffer.from([
+  0x00, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00,
+  0xff, 0xff, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00
+]);

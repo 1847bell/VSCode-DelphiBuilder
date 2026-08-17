@@ -1,3 +1,4 @@
+import { readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { CompilerRunner } from "../../src/compiler/compilerRunner";
@@ -57,6 +58,25 @@ describe("CompilerRunner", () => {
     expect(result.exitCode).toBe(0);
     expect(result.stage).toBe("compiler");
     expect(result.output.indexOf("resource-ok")).toBeLessThan(result.output.indexOf("runner-ok"));
+  });
+
+  it("creates a missing wildcard project resource without overwriting an existing file", async () => {
+    const output = path.resolve("test/fixtures/generated/ProjectResource.res");
+    await rm(output, { force: true });
+    const runner = new CompilerRunner();
+    const buildPlan = plan({
+      projectResource: { output, createIfMissing: true }
+    });
+
+    const firstResult = await runner.run(buildPlan, "utf8", () => undefined);
+    expect(firstResult.exitCode).toBe(0);
+    expect((await readFile(output)).length).toBe(32);
+
+    const existing = Buffer.from("existing-project-resource");
+    await writeFile(output, existing);
+    const secondResult = await runner.run(buildPlan, "utf8", () => undefined);
+    expect(secondResult.exitCode).toBe(0);
+    expect(await readFile(output)).toEqual(existing);
   });
 
   it("does not start the compiler when resource preprocessing fails", async () => {

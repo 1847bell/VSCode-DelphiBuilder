@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createBuildPlan } from "../../src/compiler/buildPlan";
 
 const resourceProject = path.resolve("test/fixtures/ResourceSample.dproj");
+const projectResourceProject = path.resolve("test/fixtures/ProjectResourceSample.dproj");
 const sampleProject = path.resolve("test/fixtures/Sample.dproj");
 
 describe("createBuildPlan resource preprocessing", () => {
@@ -40,6 +41,35 @@ describe("createBuildPlan resource preprocessing", () => {
     expect(plan.resourceBuild).toBeUndefined();
     expect(plan.warnings).toContain(
       "Resource preprocessing is disabled; existing .res files are required for: ResourceUnit.rc"
+    );
+  });
+
+  it("adds a create-if-missing step for a wildcard project resource", async () => {
+    const plan = await createBuildPlan({
+      projectFile: projectResourceProject,
+      configuration: "Debug",
+      compilerPath: process.execPath,
+      brcc32Path: path.resolve("missing-BRCC32.exe")
+    });
+
+    expect(plan.projectResource).toEqual({
+      output: path.resolve("test/fixtures/ProjectResourceSample.res"),
+      createIfMissing: true
+    });
+    expect(plan.resourceBuild).toBeUndefined();
+  });
+
+  it("reports a disabled wildcard project resource step", async () => {
+    const plan = await createBuildPlan({
+      projectFile: projectResourceProject,
+      configuration: "Debug",
+      compilerPath: process.execPath,
+      resourceBuild: false
+    });
+
+    expect(plan.projectResource).toBeUndefined();
+    expect(plan.warnings).toContain(
+      `Resource preprocessing is disabled; existing .res files are required for: ${path.resolve("test/fixtures/ProjectResourceSample.res")}`
     );
   });
 

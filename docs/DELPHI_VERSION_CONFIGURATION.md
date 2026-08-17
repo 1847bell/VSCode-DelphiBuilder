@@ -25,7 +25,7 @@
 - `.dproj` 属性到 DCC 参数的映射；
 - 布尔值和枚举值的参数规则。
 
-版本配置文件不负责描述任意 MSBuild 行为。扩展不会执行 `.dproj` 中导入的 MSBuild `Import`、自定义 `Target`、编译前脚本或编译后脚本。唯一的资源预处理例外是：通用代码会识别 `RcCompile` 项，并在 DCC 前直接运行该版本 BDS 安装中的 `BRCC32.exe`。
+版本配置文件不负责描述任意 MSBuild 行为。扩展不会执行 `.dproj` 中导入的 MSBuild `Import`、自定义 `Target`、编译前脚本或编译后脚本。资源预处理例外由通用代码处理：识别主源中的 `{$R *.res}` 并在对应项目资源缺失时创建最小有效 `.res`；识别 `RcCompile` 项并在 DCC 前直接运行该版本 BDS 安装中的 `BRCC32.exe`。
 
 如果新编译器的差异可以归纳为上述字段，通常只需要增加 JSON、更新 `package.json` 并补测试。如果差异改变了构建流程本身，例如需要新的路径合并策略、不同的项目属性解析方式或不同的进程启动流程，则还必须修改 TypeScript 通用逻辑。
 
@@ -168,7 +168,7 @@ test/integration/    可选的真实 DCC 集成测试
 - Include 路径：项目 `DCC_IncludePath`，然后追加 Unit 路径；
 - Resource 路径：翻译后的 Resource Path、`BRCC_OutputDir`、项目 Unit Search Path、项目 Resource Path、BDS Library Path。
 
-当 `.dproj` 包含 `RcCompile` 时，`buildPlan.ts` 还会根据 `BRCC_OutputDir`、`BRCC_IncludePath`、`BRCC_Defines`、`BRCC_CodePage`、`BRCC_Language`、`BRCC_EnableMultiByte`、`BRCC_Verbose`、`BRCC_DeleteIncludePath` 和项目项的 `Suffix` 生成 BRCC32 步骤。资源会在每次构建时重新编译，因为 `.rc` 内部 Include 依赖无法可靠地仅靠主文件时间戳判断。`RcItem` 项目资源不会由直接 DCC 流程生成，Build Plan 会给出警告。
+主 `.dpr` 或 `.dpk` 包含 `{$R *.res}` 时，`buildPlan.ts` 会增加 `projectResource` 步骤；Runner 仅在对应项目 `.res` 缺失时创建最小有效资源，已有文件不会被覆盖。当 `.dproj` 包含 `RcCompile` 时，`buildPlan.ts` 还会根据 `BRCC_OutputDir`、`BRCC_IncludePath`、`BRCC_Defines`、`BRCC_CodePage`、`BRCC_Language`、`BRCC_EnableMultiByte`、`BRCC_Verbose`、`BRCC_DeleteIncludePath` 和项目项的 `Suffix` 生成 BRCC32 步骤。资源会在每次构建时重新编译，因为 `.rc` 内部 Include 依赖无法可靠地仅靠主文件时间戳判断。`RcItem` 项目资源不会由直接 DCC 流程生成，Build Plan 会给出警告。
 
 如果新版本需要不同的合并顺序或不同的项目属性，不能只修改 `specialSwitches`，必须修改 `dccArgumentBuilder.ts`，并为该行为增加测试。
 
@@ -397,7 +397,7 @@ environment
 | `delphiXe8.additionalArguments` | 字符串数组 | `[]` | 在主源码参数前追加的 DCC 参数 |
 | `delphiXe8.environment` | 字符串对象 | `{}` | 覆盖选定版本 BDS 环境的变量 |
 
-全局设置 `delphiDcc.resourceBuild` 为布尔值，默认 `true`；关闭后扩展不会生成 `RcCompile` 对应的 `.res`。其中 `showBuildPlanMenu` 的枚举值为 `hide`、`show`，`environment` 的每个值必须是字符串。设置作用域应为 `resource`，因为扩展会针对当前 `.dproj` 资源读取配置。
+全局设置 `delphiDcc.resourceBuild` 为布尔值，默认 `true`；关闭后扩展不会创建缺失的通配符项目 `.res`，也不会生成 `RcCompile` 对应的 `.res`。其中 `showBuildPlanMenu` 的枚举值为 `hide`、`show`，`environment` 的每个值必须是字符串。设置作用域应为 `resource`，因为扩展会针对当前 `.dproj` 资源读取配置。
 
 ### 步骤 7：检查静态命令和菜单引用
 
@@ -446,6 +446,7 @@ npm run compile
 | Win32 Rebuild | Rebuild 参数确实出现且能重新编译依赖单元 |
 | Win64 Build | DCC64 路径和 Win64 BDS Library/Debug DCU Path |
 | 干净的 `RcCompile` 项目 | 删除已有 `.res` 后，BRCC32 先生成资源，随后 DCC 成功；修改 `.rc` 后资源二进制必须变化 |
+| `{$R *.res}` 项目 | 删除项目同名 `.res` 后，Build Plan 显示 `projectResource`，Runner 创建资源后 DCC 成功；已有 `.res` 不得被覆盖 |
 | `.dpk` 项目 | BPL/DCP 产物目录和运行时包参数 |
 | 中文或空格路径 | 路径解析和编译器输出 |
 | 错误项目 | DCC 错误能进入 Output/Problems，不会静默成功 |
@@ -517,7 +518,7 @@ extension/delphi-versions/schema.json
 
 ### 7.8 BRCC32 或资源文件找不到
 
-先显示 Build Plan，检查 `resourceBuild` 中的 `executable`、`input`、`output` 和 `arguments`。标准安装会从 BDS 根目录的 `bin\BRCC32.exe` 自动发现；非标准安装可设置版本区段下的 `rsvarsPath` 或 `brcc32Path`。如果项目只有 `RcItem` 而没有 `RcCompile`，扩展不会生成项目级 `.dres`，必须保留已有项目资源或改用完整 IDE/MSBuild 构建流程。
+先显示 Build Plan。主源包含 `{$R *.res}` 时应看到 `projectResource.output`；该文件缺失时 Runner 会创建，已有文件会保留。`RcCompile` 项目应检查 `resourceBuild` 中的 `executable`、`input`、`output` 和 `arguments`。标准安装会从 BDS 根目录的 `bin\BRCC32.exe` 自动发现；非标准安装可设置版本区段下的 `rsvarsPath` 或 `brcc32Path`。如果项目只有 `RcItem` 而没有 `RcCompile`，扩展不会生成项目级 `.dres`，必须保留已有项目资源或改用完整 IDE/MSBuild 构建流程。
 
 ## 8. 提交前检查清单
 

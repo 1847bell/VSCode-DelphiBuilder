@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.2.9
+
+- Detect `{$R *.res}` in the project main source and create a minimal valid project `.res` when it is missing.
+- Preserve existing project resources, expose the create-if-missing action in the Build Plan, and cover it with real XE7 compilation tests.
+
 ## 0.2.8
 
 - Compile `.dproj` `RcCompile` resources with BDS `BRCC32.exe` before DCC so clean projects no longer require a prior IDE build.

@@ -2,7 +2,7 @@
   "name": "delphi-dcc-builder",
   "displayName": "Delphi DCC Builder",
   "description": "Build Delphi Win32 and Win64 projects with DCC32 and DCC64 from Visual Studio Code.",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "icon": "images/icon.png",
   "publisher": "1847bell",
   "author": "Alex Niu",
@@ -111,7 +111,7 @@
           "type": "boolean",
           "default": true,
           "scope": "resource",
-          "description": "Compile .dproj RcCompile resources with BRCC32 before running DCC."
+          "description": "Prepare missing project resources and compile .dproj RcCompile resources before running DCC."
         },
         "delphiXe7.compilerPath": {
           "type": "string",

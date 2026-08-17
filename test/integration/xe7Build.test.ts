@@ -103,6 +103,31 @@ describe("Delphi XE7 integration", () => {
       await writeFile(resourceSource, originalSource, "utf8");
     }
   });
+
+  it("creates a missing wildcard project resource before DCC32", async () => {
+    const resourceFile = path.resolve("test/fixtures/ProjectResourceSample.res");
+    await rm(resourceFile, { force: true });
+    try {
+      const plan = await createXe7Plan(path.resolve("test/fixtures/ProjectResourceSample.dproj"));
+      expect(plan.projectResource).toEqual({
+        output: resourceFile,
+        createIfMissing: true
+      });
+
+      const output: string[] = [];
+      const result = await new CompilerRunner().run(
+        plan,
+        await resolveOutputEncoding("system"),
+        (text) => output.push(text)
+      );
+      expect(result.exitCode, output.join("")).toBe(0);
+      expect(result.stage).toBe("compiler");
+      expect(existsSync(resourceFile)).toBe(true);
+      expect(plan.expectedArtifacts.some(existsSync)).toBe(true);
+    } finally {
+      await rm(resourceFile, { force: true });
+    }
+  });
 });
 
 async function createXe7Plan(projectFile = path.resolve("test/fixtures/Sample.dproj")) {
