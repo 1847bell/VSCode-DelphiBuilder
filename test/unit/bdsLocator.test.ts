@@ -1,6 +1,12 @@
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { parseRsVarsContent, resolveBdsEnvironment } from "../../src/environment/bdsLocator";
+import {
+  parseRsVarsContent,
+  resolveBdsEnvironment,
+  resolveResourceCompilerPath
+} from "../../src/environment/bdsLocator";
 
 vi.mock("../../src/environment/registryReader", () => ({
   queryRegistry: vi.fn(async (key: string) => {
@@ -66,5 +72,55 @@ describe("parseRsVarsContent", () => {
       `${path.join(root, "lib", "win64", "release")};D:\\SDK\\units64`
     );
     expect(result.debugDcuPath).toBe(path.join(root, "lib", "win64", "debug"));
+  });
+
+  it("uses an explicit rsvars.bat path and rejects a missing override", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "delphi-rsvars-"));
+    const rsVarsPath = path.join(directory, "rsvars.bat");
+    await writeFile(rsVarsPath, "@SET FrameworkDir=C:\\Framework\r\n", "utf8");
+    try {
+      const root = path.resolve("test/fixtures/fake-bds");
+      const result = await resolveBdsEnvironment(
+        path.join(root, "bin", "DCC32.exe"),
+        {},
+        "Win32",
+        "XE7",
+        rsVarsPath
+      );
+      expect(result.rsVarsPath).toBe(rsVarsPath);
+      expect(result.rsVarsFound).toBe(true);
+      expect(result.variables.FrameworkDir).toBe("C:\\Framework");
+
+      await expect(resolveBdsEnvironment(
+        path.join(root, "bin", "DCC32.exe"),
+        {},
+        "Win32",
+        "XE7",
+        path.join(directory, "missing.bat")
+      )).rejects.toThrow("Configured rsvars.bat was not found");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("discovers BRCC32.exe from the BDS root and validates an explicit path", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "delphi-brcc-"));
+    const binDirectory = path.join(directory, "bin");
+    const brcc32Path = path.join(binDirectory, "brcc32.exe");
+    await mkdir(binDirectory, { recursive: true });
+    await writeFile(brcc32Path, "", "utf8");
+    try {
+      expect(await resolveResourceCompilerPath(undefined, directory, {})).toMatchObject({
+        path: brcc32Path
+      });
+      expect(await resolveResourceCompilerPath(brcc32Path, directory, {})).toEqual({
+        path: brcc32Path,
+        candidates: [brcc32Path]
+      });
+      await expect(resolveResourceCompilerPath(path.join(directory, "missing.exe"), directory, {}))
+        .rejects.toThrow("Configured BRCC32.exe was not found");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 });

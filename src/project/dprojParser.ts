@@ -1,7 +1,12 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { XMLParser } from "fast-xml-parser";
-import { DelphiPlatform, DprojEvaluation, ProjectConfiguration } from "../core/types";
+import {
+  DelphiPlatform,
+  DprojEvaluation,
+  ProjectConfiguration,
+  ProjectResourceItem
+} from "../core/types";
 import { ConditionSyntaxError, evaluateCondition } from "./conditionEvaluator";
 import { expandMsBuildProperties, expandProperties, PropertyBag } from "./propertyResolver";
 
@@ -53,13 +58,14 @@ export function evaluateDproj(
       evaluatePropertyGroup(node, properties, warnings);
     } else if (name === "Import") {
       const project = getAttribute(node, "Project") ?? "(unknown)";
-      warnings.push(`MSBuild import is not executed: ${project}`);
+      warnings.push(`MSBuild import is not evaluated by the direct DCC argument parser: ${project}`);
     } else if (name === "Target") {
       warnings.push("MSBuild Target elements are not executed by direct DCC builds.");
     }
   }
 
   const projectDirectory = path.dirname(projectFile);
+  const resourceItems = readResourceItems(projectChildren, properties, warnings);
   let mainSourceValue = properties.get("MainSource")?.trim();
   if (!mainSourceValue) {
     mainSourceValue = `${path.basename(projectFile, path.extname(projectFile))}.dpr`;
@@ -81,9 +87,51 @@ export function evaluateDproj(
     configuration,
     platform,
     configurations,
+    resourceItems,
     properties: properties.toObject(),
     warnings: [...new Set(warnings)]
   };
+}
+
+function readResourceItems(
+  projectChildren: OrderedNode[],
+  properties: PropertyBag,
+  warnings: string[]
+): ProjectResourceItem[] {
+  const items: ProjectResourceItem[] = [];
+  for (const itemGroup of findElements(projectChildren, "ItemGroup")) {
+    if (!tryEvaluateCondition(getAttribute(itemGroup, "Condition"), properties, warnings)) {
+      continue;
+    }
+    for (const item of getChildren(itemGroup)) {
+      const kind = getElementName(item);
+      if (kind !== "RcCompile" && kind !== "RcItem") {
+        continue;
+      }
+      if (!tryEvaluateCondition(getAttribute(item, "Condition"), properties, warnings)) {
+        continue;
+      }
+      const include = getAttribute(item, "Include")?.trim();
+      if (!include) {
+        continue;
+      }
+      const expanded = expandMsBuildProperties(include, properties);
+      addUnresolvedWarnings(expanded.unresolved, `${kind} Include`, warnings);
+      const suffixValue = getChildText(getChildren(item), "Suffix")?.trim();
+      const suffix = suffixValue ? expandMsBuildProperties(suffixValue, properties) : undefined;
+      if (suffix) {
+        addUnresolvedWarnings(suffix.unresolved, `${kind} Suffix`, warnings);
+      }
+      for (const includeValue of expanded.value.split(";").map((value) => value.trim()).filter(Boolean)) {
+        items.push({
+          kind,
+          include: includeValue,
+          suffix: suffix?.value.trim() || undefined
+        });
+      }
+    }
+  }
+  return items;
 }
 
 export function discoverConfigurations(content: string): ProjectConfiguration[] {

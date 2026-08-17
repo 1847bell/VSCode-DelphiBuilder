@@ -12,6 +12,7 @@ function evaluation(properties: Record<string, string>): DprojEvaluation {
     configuration: "Debug",
     platform: "Win32",
     configurations: [],
+    resourceItems: [],
     properties,
     warnings: []
   };

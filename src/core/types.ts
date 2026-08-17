@@ -7,14 +7,28 @@ export interface ProjectConfiguration {
   parentKey?: string;
 }
 
+export interface ProjectResourceItem {
+  kind: "RcCompile" | "RcItem";
+  include: string;
+  suffix?: string;
+}
+
 export interface DprojEvaluation {
   projectFile: string;
   mainSource: string;
   configuration: string;
   platform: DelphiPlatform;
   configurations: ProjectConfiguration[];
+  resourceItems: ProjectResourceItem[];
   properties: Record<string, string>;
   warnings: string[];
+}
+
+export interface ResourceBuildStep {
+  executable: string;
+  arguments: string[];
+  input: string;
+  output: string;
 }
 
 export interface BuildPlan {
@@ -27,6 +41,7 @@ export interface BuildPlan {
   platform: DelphiPlatform;
   environment: Record<string, string>;
   arguments: string[];
+  resourceBuild?: ResourceBuildStep[];
   expectedArtifacts: string[];
   warnings: string[];
 }
@@ -44,6 +59,7 @@ export interface CompilerDiagnostic {
 }
 
 export interface BuildResult {
+  stage: "resource" | "compiler";
   exitCode: number | null;
   signal: NodeJS.Signals | null;
   output: string;

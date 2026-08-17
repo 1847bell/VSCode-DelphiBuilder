@@ -71,6 +71,9 @@ describe("extension manifest", () => {
     expect(properties).not.toHaveProperty("delphiXe7.defaultConfiguration");
     expect(properties["delphiXe7.compilerPath"].default).toBe("");
     expect(properties["delphiXe7.compiler64Path"].default).toBe("");
+    expect(properties["delphiXe7.rsvarsPath"].default).toBe("");
+    expect(properties["delphiXe7.brcc32Path"].default).toBe("");
+    expect(properties["delphiDcc.resourceBuild"].default).toBe(true);
   });
 
   it("offers the supported Delphi versions as a dropdown", () => {

@@ -5,3 +5,4 @@ coverage/
 *.log
 test/fixtures/bin/
 test/fixtures/dcu/
+test/fixtures/generated/

@@ -23,40 +23,83 @@ export class CompilerRunner {
     }
     await assertFileExists(plan.compilerPath, path.basename(plan.compilerPath) || "Delphi compiler");
     await assertFileExists(plan.mainSource, "Main source");
+    if (plan.resourceBuild) {
+      for (const step of plan.resourceBuild) {
+        await assertFileExists(step.executable, "BRCC32.exe");
+        await assertFileExists(step.input, "Resource source");
+      }
+    }
     await prepareOutputDirectories(plan);
 
     this.cancellationRequested = false;
     const startedAt = Date.now();
     const output: string[] = [];
-    const child = spawn(plan.compilerPath, plan.arguments, {
+    const capture = (text: string): void => {
+      output.push(text);
+      onOutput(text);
+    };
+
+    for (const step of plan.resourceBuild ?? []) {
+      capture(`[Resource Build] ${path.basename(step.input)}\n`);
+      const resourceResult = await this.runProcess(
+        step.executable,
+        step.arguments,
+        plan,
+        encoding,
+        capture
+      );
+      if (resourceResult.exitCode !== 0 || this.cancellationRequested) {
+        return {
+          stage: "resource",
+          ...resourceResult,
+          output: output.join(""),
+          durationMs: Date.now() - startedAt,
+          cancelled: this.cancellationRequested
+        };
+      }
+    }
+
+    capture(`[Delphi Compile] ${path.basename(plan.compilerPath)}\n`);
+    const compilerResult = await this.runProcess(
+      plan.compilerPath,
+      plan.arguments,
+      plan,
+      encoding,
+      capture
+    );
+    return {
+      stage: "compiler",
+      ...compilerResult,
+      output: output.join(""),
+      durationMs: Date.now() - startedAt,
+      cancelled: this.cancellationRequested
+    };
+  }
+
+  private async runProcess(
+    executable: string,
+    arguments_: string[],
+    plan: BuildPlan,
+    encoding: string,
+    capture: (text: string) => void
+  ): Promise<{ exitCode: number | null; signal: NodeJS.Signals | null }> {
+    const child = spawn(executable, arguments_, {
       cwd: plan.workingDirectory,
       env: plan.environment,
       shell: false,
       windowsHide: true
     });
     this.child = child;
-
     const stdoutDecoder = iconv.decodeStream(encoding);
     const stderrDecoder = iconv.decodeStream(encoding);
-    const capture = (text: string): void => {
-      output.push(text);
-      onOutput(text);
-    };
     stdoutDecoder.on("data", capture);
     stderrDecoder.on("data", capture);
     child.stdout.pipe(stdoutDecoder);
     child.stderr.pipe(stderrDecoder);
-
     try {
-      const { exitCode, signal } = await waitForProcess(child);
+      const result = await waitForProcess(child);
       await Promise.allSettled([finished(stdoutDecoder), finished(stderrDecoder)]);
-      return {
-        exitCode,
-        signal,
-        output: output.join(""),
-        durationMs: Date.now() - startedAt,
-        cancelled: this.cancellationRequested
-      };
+      return result;
     } finally {
       this.child = undefined;
     }
@@ -115,6 +158,9 @@ async function prepareOutputDirectories(plan: BuildPlan): Promise<void> {
     if (match) {
       directories.add(match[1]);
     }
+  }
+  for (const step of plan.resourceBuild ?? []) {
+    directories.add(path.dirname(step.output));
   }
   await Promise.all([...directories].map((directory) => mkdir(directory, { recursive: true })));
 }

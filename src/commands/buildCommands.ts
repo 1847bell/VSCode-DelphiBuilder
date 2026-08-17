@@ -115,7 +115,9 @@ export class BuildCommands implements vscode.Disposable {
         }
       });
 
-      const parsed = parseCompilerDiagnostics(result.output, plan.workingDirectory, plan.projectFile);
+      const parsed = result.stage === "compiler"
+        ? parseCompilerDiagnostics(result.output, plan.workingDirectory, plan.projectFile)
+        : [];
       this.diagnostics.publish(projectFile, parsed);
       const errors = parsed.filter((item) => item.level === "error").length;
       const warnings = parsed.filter((item) => item.level === "warning").length;
@@ -125,8 +127,15 @@ export class BuildCommands implements vscode.Disposable {
         this.output.appendLine(`\nBuild cancelled after ${duration}s.`);
         void vscode.window.showInformationMessage("Delphi build cancelled.");
       } else if (result.exitCode !== 0) {
-        this.output.appendLine(`\nBuild failed with exit code ${result.exitCode}: ${errors} errors, ${warnings} warnings.`);
-        void vscode.window.showErrorMessage(`Delphi build failed: ${errors} errors, ${warnings} warnings`);
+        const stage = result.stage === "resource" ? "Resource build" : "Delphi build";
+        this.output.appendLine(
+          `\n${stage} failed with exit code ${result.exitCode}: ${errors} errors, ${warnings} warnings.`
+        );
+        void vscode.window.showErrorMessage(
+          result.stage === "resource"
+            ? "Delphi resource build failed. See the Delphi DCC Builder output for details."
+            : `Delphi build failed: ${errors} errors, ${warnings} warnings`
+        );
       } else {
         const artifact = plan.expectedArtifacts.find(existsSync);
         if (!artifact && plan.expectedArtifacts.length > 0) {
@@ -293,6 +302,7 @@ export class BuildCommands implements vscode.Disposable {
       getDelphiVersionConfiguration(version).settingsSection,
       resource
     );
+    const commonSettings = vscode.workspace.getConfiguration("delphiDcc", resource);
     return createBuildPlan({
       version,
       projectFile,
@@ -300,6 +310,9 @@ export class BuildCommands implements vscode.Disposable {
       platform,
       rebuild,
       compilerPath,
+      resourceBuild: commonSettings.get<boolean>("resourceBuild", true),
+      rsVarsPath: settings.get<string>("rsvarsPath", ""),
+      brcc32Path: settings.get<string>("brcc32Path", ""),
       additionalArguments: settings.get<string[]>("additionalArguments", []),
       environment: settings.get<Record<string, string>>("environment", {})
     });
@@ -615,6 +628,16 @@ export class BuildCommands implements vscode.Disposable {
     this.output.appendLine(`Working directory: ${plan.workingDirectory}`);
     this.output.appendLine(`Compiler: ${plan.compilerPath}`);
     this.output.appendLine(`Arguments: ${plan.arguments.map(quoteForDisplay).join(" ")}`);
+    if (plan.resourceBuild) {
+      for (const step of plan.resourceBuild) {
+        this.output.appendLine(`Resource builder: ${step.executable}`);
+        this.output.appendLine(`Resource input: ${step.input}`);
+        this.output.appendLine(`Resource output: ${step.output}`);
+        this.output.appendLine(
+          `Resource arguments: ${step.arguments.map(quoteForDisplay).join(" ")}`
+        );
+      }
+    }
     for (const warning of plan.warnings) {
       this.output.appendLine(`Warning: ${warning}`);
     }

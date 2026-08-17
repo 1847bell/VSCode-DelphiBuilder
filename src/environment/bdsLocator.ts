@@ -13,6 +13,8 @@ import { queryRegistry } from "./registryReader";
 export interface BdsEnvironment {
   rootDir: string;
   compilerPath: string;
+  rsVarsPath: string;
+  rsVarsFound: boolean;
   variables: Record<string, string>;
   libraryPath: string;
   debugDcuPath: string;
@@ -23,7 +25,8 @@ export async function resolveBdsEnvironment(
   compilerOverride: string | undefined,
   environmentOverrides: Record<string, string> = {},
   platform: DelphiPlatform = "Win32",
-  version: DelphiVersion = DEFAULT_DELPHI_VERSION
+  version: DelphiVersion = DEFAULT_DELPHI_VERSION,
+  rsVarsOverride?: string
 ): Promise<BdsEnvironment> {
   const versionConfiguration = getDelphiVersionConfiguration(version);
   const bdsKey = `Software\\Embarcadero\\BDS\\${versionConfiguration.bdsRegistryVersion}`;
@@ -45,7 +48,17 @@ export async function resolveBdsEnvironment(
     || inferRootFromCompiler(compilerPath)
     || fallbackRoot;
 
-  const rsVars = await readRsVars(rootDir);
+  const configuredRsVarsPath = rsVarsOverride?.trim();
+  const rsVarsPath = configuredRsVarsPath
+    ? path.resolve(configuredRsVarsPath)
+    : path.join(rootDir, "bin", "rsvars.bat");
+  const rsVarsContent = await readOptionalFile(rsVarsPath);
+  if (configuredRsVarsPath && rsVarsContent === undefined) {
+    throw new Error(`Configured rsvars.bat was not found: ${rsVarsPath}`);
+  }
+  const rsVars = rsVarsContent === undefined
+    ? {}
+    : parseRsVarsContent(iconv.decode(rsVarsContent, "cp936"));
   const bdsUserDir = await readBdsUserDirectory(versionConfiguration.studioDirectoryVersion);
 
   const registryVariables = {
@@ -83,6 +96,9 @@ export async function resolveBdsEnvironment(
       `BDS ${versionConfiguration.bdsRegistryVersion} RootDir was not found in the 32-bit registry view; using the default ${version} path.`
     );
   }
+  if (rsVarsContent === undefined) {
+    warnings.push(`rsvars.bat was not found: ${rsVarsPath}`);
+  }
   if (!await exists(compilerPath)) {
     warnings.push(`${compilerName} was not found: ${compilerPath}`);
   }
@@ -103,7 +119,59 @@ export async function resolveBdsEnvironment(
     }
   }
 
-  return { rootDir, compilerPath, variables, libraryPath, debugDcuPath, warnings };
+  return {
+    rootDir,
+    compilerPath,
+    rsVarsPath,
+    rsVarsFound: rsVarsContent !== undefined,
+    variables,
+    libraryPath,
+    debugDcuPath,
+    warnings
+  };
+}
+
+export interface ResourceCompilerResolution {
+  path?: string;
+  candidates: string[];
+}
+
+export async function resolveResourceCompilerPath(
+  configuredPath: string | undefined,
+  rootDir: string,
+  variables: Record<string, string>
+): Promise<ResourceCompilerResolution> {
+  const configured = configuredPath?.trim();
+  if (configured) {
+    const resolved = path.resolve(configured);
+    if (!await exists(resolved)) {
+      throw new Error(`Configured BRCC32.exe was not found: ${resolved}`);
+    }
+    return { path: resolved, candidates: [resolved] };
+  }
+
+  const candidates = [path.join(rootDir, "bin", "brcc32.exe")];
+  const bdsBin = getVariable(variables, "BDSBIN")?.trim();
+  if (bdsBin) {
+    candidates.push(path.join(trimQuotes(bdsBin), "brcc32.exe"));
+  }
+  const pathValue = getVariable(variables, "PATH") ?? process.env.PATH ?? "";
+  for (const directory of pathValue.split(path.delimiter)) {
+    const value = trimQuotes(directory.trim());
+    if (value) {
+      candidates.push(path.join(value, "brcc32.exe"));
+    }
+  }
+
+  const uniqueCandidates = [...new Map(
+    candidates.map((candidate) => [path.normalize(candidate).toLocaleLowerCase(), path.normalize(candidate)])
+  ).values()];
+  for (const candidate of uniqueCandidates) {
+    if (await exists(candidate)) {
+      return { path: candidate, candidates: uniqueCandidates };
+    }
+  }
+  return { candidates: uniqueCandidates };
 }
 
 function expandBdsPath(value: string, properties: PropertyBag): ReturnType<typeof expandProperties> {
@@ -175,12 +243,11 @@ function expandPercentValue(value: string, properties: PropertyBag): string {
   return result;
 }
 
-async function readRsVars(rootDir: string): Promise<Record<string, string>> {
+async function readOptionalFile(file: string): Promise<Buffer | undefined> {
   try {
-    const content = iconv.decode(await readFile(path.join(rootDir, "bin", "rsvars.bat")), "cp936");
-    return parseRsVarsContent(content);
+    return await readFile(file);
   } catch {
-    return {};
+    return undefined;
   }
 }
 
@@ -202,4 +269,13 @@ async function exists(file: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function getVariable(variables: Record<string, string>, name: string): string | undefined {
+  const match = Object.keys(variables).find((key) => key.toLocaleLowerCase() === name.toLocaleLowerCase());
+  return match ? variables[match] : undefined;
+}
+
+function trimQuotes(value: string): string {
+  return value.replace(/^"(.*)"$/, "$1");
 }

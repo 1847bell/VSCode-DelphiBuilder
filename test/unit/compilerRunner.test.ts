@@ -29,9 +29,10 @@ describe("CompilerRunner", () => {
     const chunks: string[] = [];
     const result = await new CompilerRunner().run(plan(), "utf8", (text) => chunks.push(text));
     expect(result.exitCode).toBe(0);
+    expect(result.stage).toBe("compiler");
     expect(result.cancelled).toBe(false);
-    expect(result.output).toBe("runner-ok");
-    expect(chunks.join("")).toBe("runner-ok");
+    expect(result.output).toContain("runner-ok");
+    expect(chunks.join("")).toContain("runner-ok");
   });
 
   it("checks the main source before starting the compiler", async () => {
@@ -40,5 +41,64 @@ describe("CompilerRunner", () => {
       "utf8",
       () => undefined
     )).rejects.toThrow("Main source was not found");
+  });
+
+  it("runs resource preprocessing before the compiler", async () => {
+    const chunks: string[] = [];
+    const result = await new CompilerRunner().run(plan({
+      resourceBuild: [{
+        executable: process.execPath,
+        arguments: ["-e", "process.stdout.write('resource-ok')"],
+        input: fixture,
+        output: path.resolve("test/fixtures/generated/Resource.res")
+      }]
+    }), "utf8", (text) => chunks.push(text));
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stage).toBe("compiler");
+    expect(result.output.indexOf("resource-ok")).toBeLessThan(result.output.indexOf("runner-ok"));
+  });
+
+  it("does not start the compiler when resource preprocessing fails", async () => {
+    const result = await new CompilerRunner().run(plan({
+      resourceBuild: [{
+        executable: process.execPath,
+        arguments: ["-e", "process.stderr.write('resource-failed'); process.exit(7)"],
+        input: fixture,
+        output: path.resolve("test/fixtures/generated/Resource.res")
+      }]
+    }), "utf8", () => undefined);
+
+    expect(result.exitCode).toBe(7);
+    expect(result.stage).toBe("resource");
+    expect(result.output).toContain("resource-failed");
+    expect(result.output).not.toContain("runner-ok");
+  });
+
+  it("cancels resource preprocessing without starting the compiler", async () => {
+    const runner = new CompilerRunner();
+    let markStarted: (() => void) | undefined;
+    const started = new Promise<void>((resolve) => {
+      markStarted = resolve;
+    });
+    const running = runner.run(plan({
+      resourceBuild: [{
+        executable: process.execPath,
+        arguments: ["-e", "process.stdout.write('resource-started'); setInterval(() => {}, 1000)"],
+        input: fixture,
+        output: path.resolve("test/fixtures/generated/Resource.res")
+      }]
+    }), "utf8", (text) => {
+      if (text.includes("resource-started")) {
+        markStarted?.();
+      }
+    });
+
+    await started;
+    expect(await runner.cancel()).toBe(true);
+    const result = await running;
+    expect(result.stage).toBe("resource");
+    expect(result.cancelled).toBe(true);
+    expect(result.output).not.toContain("runner-ok");
   });
 });

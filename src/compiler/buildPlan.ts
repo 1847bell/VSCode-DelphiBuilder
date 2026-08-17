@@ -1,7 +1,17 @@
 import path from "node:path";
-import { BuildPlan, DelphiPlatform, DelphiVersion, DprojEvaluation } from "../core/types";
-import { DEFAULT_DELPHI_VERSION } from "../delphi/versions";
-import { resolveBdsEnvironment } from "../environment/bdsLocator";
+import {
+  BuildPlan,
+  DelphiPlatform,
+  DelphiVersion,
+  DprojEvaluation,
+  ResourceBuildStep
+} from "../core/types";
+import { DEFAULT_DELPHI_VERSION, getDelphiVersionConfiguration } from "../delphi/versions";
+import {
+  BdsEnvironment,
+  resolveBdsEnvironment,
+  resolveResourceCompilerPath
+} from "../environment/bdsLocator";
 import { evaluateDprojFile } from "../project/dprojParser";
 import { buildDccArguments } from "./dccArgumentBuilder";
 
@@ -12,6 +22,9 @@ export interface CreateBuildPlanOptions {
   platform?: DelphiPlatform;
   rebuild?: boolean;
   compilerPath?: string;
+  resourceBuild?: boolean;
+  rsVarsPath?: string;
+  brcc32Path?: string;
   additionalArguments?: string[];
   environment?: Record<string, string>;
 }
@@ -24,7 +37,8 @@ export async function createBuildPlan(options: CreateBuildPlanOptions): Promise<
     options.compilerPath,
     options.environment,
     platform,
-    version
+    version,
+    options.rsVarsPath
   );
   const inheritedEnvironment = Object.fromEntries(
     Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined)
@@ -49,6 +63,17 @@ export async function createBuildPlan(options: CreateBuildPlanOptions): Promise<
     debugDcuPath: bds.debugDcuPath,
     additionalArguments: options.additionalArguments
   });
+  const warnings = [...new Set([
+    ...bds.warnings,
+    ...evaluation.warnings,
+    ...dcc.warnings
+  ])];
+  const resourceBuild = await createResourceBuildPlan(
+    evaluation,
+    bds,
+    options,
+    warnings
+  );
 
   return {
     version,
@@ -60,13 +85,147 @@ export async function createBuildPlan(options: CreateBuildPlanOptions): Promise<
     platform,
     environment,
     arguments: dcc.arguments,
+    resourceBuild,
     expectedArtifacts: locateExpectedArtifacts(evaluation),
-    warnings: [...new Set([
-      ...bds.warnings,
-      ...evaluation.warnings,
-      ...dcc.warnings
-    ])]
+    warnings
   };
+}
+
+async function createResourceBuildPlan(
+  evaluation: DprojEvaluation,
+  bds: BdsEnvironment,
+  options: CreateBuildPlanOptions,
+  warnings: string[]
+): Promise<ResourceBuildStep[] | undefined> {
+  if (evaluation.resourceItems.length === 0) {
+    return undefined;
+  }
+  if (options.resourceBuild === false) {
+    warnings.push(
+      `Resource preprocessing is disabled; existing .res files are required for: ${evaluation.resourceItems.map((item) => item.include).join(", ")}`
+    );
+    return undefined;
+  }
+
+  const rcCompileItems = evaluation.resourceItems.filter((item) => item.kind === "RcCompile");
+  const rcItems = evaluation.resourceItems.filter((item) => item.kind === "RcItem");
+  if (rcItems.length > 0) {
+    warnings.push(
+      `Direct resource preprocessing does not generate RcItem project resources; existing project resources are required for: ${rcItems.map((item) => item.include).join(", ")}`
+    );
+  }
+  if (rcCompileItems.length === 0) {
+    return undefined;
+  }
+
+  const compilerToUse = evaluation.properties.BRCC_CompilerToUse?.trim();
+  if (compilerToUse && compilerToUse.toLocaleLowerCase() !== "brcc32") {
+    throw new Error(`Unsupported BRCC_CompilerToUse for direct resource preprocessing: ${compilerToUse}`);
+  }
+  const resolution = await resolveResourceCompilerPath(
+    options.brcc32Path,
+    bds.rootDir,
+    bds.variables
+  );
+  if (!resolution.path) {
+    const settingsSection = getDelphiVersionConfiguration(
+      options.version ?? DEFAULT_DELPHI_VERSION
+    ).settingsSection;
+    const attempted = resolution.candidates.length > 0
+      ? resolution.candidates.slice(0, 10).map((candidate) => `  ${candidate}`).join("\n")
+      : "  No candidates could be derived from the BDS root or PATH.";
+    throw new Error([
+      `Resource build is required for ${path.basename(evaluation.projectFile)}, but BRCC32.exe was not found.`,
+      `rsvars.bat: ${bds.rsVarsPath}${bds.rsVarsFound ? "" : " (not found)"}`,
+      "Tried BRCC32:",
+      attempted,
+      `Set '${settingsSection}.brcc32Path' or '${settingsSection}.rsvarsPath'.`
+    ].join("\n"));
+  }
+
+  const projectDirectory = path.dirname(evaluation.projectFile);
+  const outputDirectory = resolveOutputDirectory(
+    evaluation.properties.BRCC_OutputDir,
+    projectDirectory
+  );
+  const commonArguments: string[] = [];
+  const includePath = resolveMergedPathList([
+    evaluation.properties.BRCC_IncludePath,
+    evaluation.properties.DCC_IncludePath,
+    evaluation.properties.DCC_TranslatedLibraryPath,
+    evaluation.properties.DCC_UnitSearchPath,
+    bds.libraryPath
+  ], projectDirectory);
+  if (includePath) {
+    commonArguments.push(`-i${includePath}`);
+  }
+  for (const define of mergeDelimitedValues(
+    evaluation.properties.BRCC_Defines,
+    evaluation.properties.DCC_Define
+  )) {
+    commonArguments.push(`-d${define}`);
+  }
+  if (isTrue(evaluation.properties.BRCC_DeleteIncludePath)) {
+    commonArguments.push("-x");
+  }
+  if (isTrue(evaluation.properties.BRCC_EnableMultiByte)) {
+    commonArguments.push("-m");
+  }
+  if (isTrue(evaluation.properties.BRCC_Verbose)) {
+    commonArguments.push("-v");
+  }
+  const codePage = evaluation.properties.BRCC_CodePage?.trim();
+  if (codePage) {
+    commonArguments.push(`-c${codePage}`);
+  }
+  const language = evaluation.properties.BRCC_Language?.trim();
+  if (language) {
+    commonArguments.push(`-l${language}`);
+  }
+  for (const propertyName of ["BRCC_UserSuppliedOptions", "BRCC_ResponseFilename"]) {
+    if (evaluation.properties[propertyName]?.trim()) {
+      warnings.push(`${propertyName} is not applied by direct BRCC32 resource preprocessing.`);
+    }
+  }
+
+  return rcCompileItems.map((item) => {
+    const input = resolveProjectPath(item.include, projectDirectory);
+    const output = path.join(
+      outputDirectory,
+      `${path.basename(input, path.extname(input))}${item.suffix ?? ""}.res`
+    );
+    return {
+      executable: resolution.path!,
+      arguments: [...commonArguments, `-fo${output}`, input],
+      input,
+      output
+    };
+  });
+}
+
+function mergeDelimitedValues(...values: Array<string | undefined>): string[] {
+  return [...new Set(values
+    .flatMap((value) => value?.split(";") ?? [])
+    .map((value) => value.trim())
+    .filter(Boolean))];
+}
+
+function resolveMergedPathList(
+  values: Array<string | undefined>,
+  projectDirectory: string
+): string {
+  return [...new Map(mergeDelimitedValues(...values).map((value) => {
+    const resolved = resolveProjectPath(value.replace(/^"(.*)"$/, "$1"), projectDirectory);
+    return [resolved.toLocaleLowerCase(), resolved];
+  })).values()].join(";");
+}
+
+function resolveProjectPath(value: string, projectDirectory: string): string {
+  return path.isAbsolute(value) ? path.normalize(value) : path.resolve(projectDirectory, value);
+}
+
+function isTrue(value: string | undefined): boolean {
+  return value?.trim().toLocaleLowerCase() === "true";
 }
 
 function locateExpectedArtifacts(evaluation: DprojEvaluation): string[] {

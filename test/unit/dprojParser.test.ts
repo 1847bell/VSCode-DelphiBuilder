@@ -28,8 +28,9 @@ describe("dprojParser", () => {
     expect(result.properties.DCC_UnitSearchPath).toBe("src;common");
     expect(result.properties.DCC_ExeOutput).toBe(".\\bin\\Debug");
     expect(result.properties.DCC_DcuOutput).toBe(".\\dcu\\Win32\\Debug");
+    expect(result.resourceItems).toEqual([]);
     expect(result.warnings).toContain(
-      "MSBuild import is not executed: $(BDS)\\Bin\\CodeGear.Delphi.Targets"
+      "MSBuild import is not evaluated by the direct DCC argument parser: $(BDS)\\Bin\\CodeGear.Delphi.Targets"
     );
   });
 
@@ -57,5 +58,25 @@ describe("dprojParser", () => {
   it("rejects a configuration that the project does not define", () => {
     expect(() => evaluateDproj(content, projectFile, { configuration: "Staging" }))
       .toThrow("Configuration 'Staging' is not defined");
+  });
+
+  it("collects resource items for the selected configuration and platform", () => {
+    const resourceProject = content.replace("  <Import", [
+      "  <ItemGroup>",
+      "    <RcCompile Include=\"Resources\\Common.rc;Resources\\Shared.rc\"><Suffix>.en</Suffix></RcCompile>",
+      "    <RcCompile Include=\"Resources\\Win64.rc\" Condition=\"'$(Platform)'=='Win64'\" />",
+      "    <RcItem Include=\"$(Config)\\Project.rc\" />",
+      "  </ItemGroup>",
+      "  <Import"
+    ].join("\n"));
+
+    expect(evaluateDproj(resourceProject, projectFile, {
+      configuration: "Debug",
+      platform: "Win32"
+    }).resourceItems).toEqual([
+      { kind: "RcCompile", include: "Resources\\Common.rc", suffix: ".en" },
+      { kind: "RcCompile", include: "Resources\\Shared.rc", suffix: ".en" },
+      { kind: "RcItem", include: "Debug\\Project.rc" }
+    ]);
   });
 });

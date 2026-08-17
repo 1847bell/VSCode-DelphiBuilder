@@ -2,7 +2,7 @@
 
 通过 Visual Studio Code 直接调用 `DCC32.exe` 或 `DCC64.exe` 编译 Delphi Win32 和 Win64 项目。目前支持 Delphi XE7，并已将特定版本的构建配置独立出来，便于后续支持其他编译器版本。
 
-当前版本：`0.2.6`
+当前版本：`0.2.8`
 
 ## 命令
 
@@ -15,6 +15,8 @@
 
 通过 `delphiDcc.version` 选择 Delphi 编译器版本，目前只有 `XE7`。Win32 编译必须设置 `delphiXe7.compilerPath`。`delphiXe7.compiler64Path` 为可选项；设置非空后，`.dproj` 资源管理器右键菜单会显示 **Build for Win64**。每次编译都会读取项目，并提示选择项目中声明的配置。Win32 Rebuild 仍可从命令面板执行。**Show Build Plan** 始终可从命令面板执行，也可以通过 `delphiXe7.showBuildPlanMenu` 将其加入资源管理器右键菜单。
 
+项目包含 `.dproj` `RcCompile` 项时，扩展会在 DCC 前调用 `BRCC32.exe` 生成 `.res`，因此全新检出的项目不再需要先用 IDE 编译一次。该行为由 `delphiDcc.resourceBuild` 控制。`delphiXe7.rsvarsPath` 和 `delphiXe7.brcc32Path` 是可选覆盖路径；为空时会根据已配置的编译器、BDS 安装目录和环境自动发现。项目级 `RcItem` 生成目前不会模拟，遇到时会在 Build Plan 中给出警告。
+
 当工作区中包含多个 `.dproj` 文件时，项目选择列表会优先显示当前工作区最近使用的最多 10 个项目。没有历史记录的工作区初始显示空列表；输入关键字后，仍会搜索当前打开工作区中的全部 `.dproj` 文件。
 
 右键 `.dproj` 并选择 **Change Output Path**，即可编辑有效的 `DCC_ExeOutput`。输入框会预填当前值，修改成功后，修改前后的值都会保留。历史记录按规范化后的 `.dproj` 完整路径隔离，并由 `delphiXe7.outputPathHistoryLimit` 限制（默认 `5`，范围 `1`-`15`）。选中的路径会保存为指定配置和平台的覆盖值，因此修改 `Release|Win32` 不会影响其他配置或平台。
@@ -26,7 +28,7 @@
 - Debug、Release 和项目自定义配置
 - 按平台展开 BDS 15.0 Library Path 和 Debug DCU Path
 
-不会执行导入的 MSBuild targets 和构建事件。不支持的项目属性会在 Build Plan 警告中报告，不会被静默忽略。
+不会执行导入的 MSBuild targets 和构建事件。`RcCompile` 资源是有限例外：扩展会直接调用 BDS `BRCC32.exe`，并使用展开后的 BRCC/DCC Define、Include Path、Code Page、Language、Suffix 和输出目录。不支持的项目属性会在 Build Plan 警告中报告，不会被静默忽略。
 
 ## Delphi 版本配置
 

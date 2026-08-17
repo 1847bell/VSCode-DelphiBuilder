@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { createBuildPlan } from "../../src/compiler/buildPlan";
@@ -64,11 +65,49 @@ describe("Delphi XE7 integration", () => {
     expect(result.exitCode, output.join("")).toBe(0);
     expect(plan.expectedArtifacts.some(existsSync)).toBe(true);
   });
+
+  it("builds an RcCompile resource before a clean DCC32 build", async () => {
+    const resourceFile = path.resolve("test/fixtures/generated/ResourceUnit.res");
+    const resourceSource = path.resolve("test/fixtures/ResourceUnit.rc");
+    await rm(resourceFile, { force: true });
+    const plan = await createXe7Plan(path.resolve("test/fixtures/ResourceSample.dproj"));
+    expect(plan.resourceBuild?.[0]).toMatchObject({
+      input: path.resolve("test/fixtures/ResourceUnit.rc"),
+      output: resourceFile
+    });
+
+    const output: string[] = [];
+    const result = await new CompilerRunner().run(
+      plan,
+      await resolveOutputEncoding("system"),
+      (text) => output.push(text)
+    );
+    expect(result.exitCode, output.join("")).toBe(0);
+    expect(result.stage).toBe("compiler");
+    expect(existsSync(resourceFile)).toBe(true);
+    expect(plan.expectedArtifacts.some(existsSync)).toBe(true);
+
+    const originalSource = await readFile(resourceSource, "utf8");
+    const originalResource = await readFile(resourceFile);
+    try {
+      await writeFile(resourceSource, originalSource.replace("resource-ok", "resource-updated"), "utf8");
+      const updatedOutput: string[] = [];
+      const updatedResult = await new CompilerRunner().run(
+        await createXe7Plan(path.resolve("test/fixtures/ResourceSample.dproj")),
+        await resolveOutputEncoding("system"),
+        (text) => updatedOutput.push(text)
+      );
+      expect(updatedResult.exitCode, updatedOutput.join("")).toBe(0);
+      expect((await readFile(resourceFile)).equals(originalResource)).toBe(false);
+    } finally {
+      await writeFile(resourceSource, originalSource, "utf8");
+    }
+  });
 });
 
-async function createXe7Plan() {
+async function createXe7Plan(projectFile = path.resolve("test/fixtures/Sample.dproj")) {
   const options = {
-    projectFile: path.resolve("test/fixtures/Sample.dproj"),
+    projectFile,
     configuration: "Debug",
     rebuild: true
   };

@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.2.8
+
+- Compile `.dproj` `RcCompile` resources with BDS `BRCC32.exe` before DCC so clean projects no longer require a prior IDE build.
+- Add automatic `rsvars.bat` and BRCC32 discovery with optional path overrides, resource-stage cancellation, build-plan details, and explicit warnings for unsupported project resource cases.
+
 ## 0.2.7
 
 - Point the Marketplace repository and issue links to the public GitHub repository.

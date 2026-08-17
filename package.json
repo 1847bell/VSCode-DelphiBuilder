@@ -2,7 +2,7 @@
   "name": "delphi-dcc-builder",
   "displayName": "Delphi DCC Builder",
   "description": "Build Delphi Win32 and Win64 projects with DCC32 and DCC64 from Visual Studio Code.",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "icon": "images/icon.png",
   "publisher": "1847bell",
   "author": "Alex Niu",
@@ -107,6 +107,12 @@
           "scope": "resource",
           "description": "Delphi compiler version used to resolve version-specific build settings and BDS environment values."
         },
+        "delphiDcc.resourceBuild": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Compile .dproj RcCompile resources with BRCC32 before running DCC."
+        },
         "delphiXe7.compilerPath": {
           "type": "string",
           "default": "",
@@ -118,6 +124,18 @@
           "default": "",
           "scope": "resource",
           "description": "Optional absolute path to the Delphi XE7 DCC64.exe. The Win64 Explorer build command is shown when this setting is not empty."
+        },
+        "delphiXe7.rsvarsPath": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "Optional absolute path to rsvars.bat. Leave empty to discover it from the configured compiler or BDS installation."
+        },
+        "delphiXe7.brcc32Path": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "Optional absolute path to BRCC32.exe used to compile RcCompile resources. Leave empty to discover it from the Delphi installation or PATH."
         },
         "delphiXe7.showBuildPlanMenu": {
           "type": "string",
