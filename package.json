@@ -2,7 +2,7 @@
   "name": "delphi-dcc-builder",
   "displayName": "Delphi DCC Builder",
   "description": "Build Delphi Win32 and Win64 projects with DCC32 and DCC64 from Visual Studio Code.",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "icon": "images/icon.png",
   "publisher": "1847bell",
   "author": "Alex Niu",
@@ -28,6 +28,10 @@
   ],
   "main": "./dist/extension.js",
   "activationEvents": [
+    "onView:delphiDccProjects",
+    "onCommand:delphiDcc.createGroup",
+    "onCommand:delphiDcc.addProjects",
+    "onCommand:delphiDcc.activateConfiguration",
     "onCommand:delphiXe7.buildProject",
     "onCommand:delphiXe7.buildProjectWin64",
     "onCommand:delphiXe7.rebuildProject",
@@ -37,6 +41,48 @@
   ],
   "contributes": {
     "commands": [
+      {
+        "command": "delphiDcc.createGroup",
+        "title": "Delphi DCC Builder: New Group",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "delphiDcc.sortGroups",
+        "title": "Delphi DCC Builder: Sort Groups",
+        "icon": "$(sort-precedence)"
+      },
+      {
+        "command": "delphiDcc.refreshProjects",
+        "title": "Delphi DCC Builder: Refresh Projects",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "delphiDcc.renameGroup",
+        "title": "Delphi DCC Builder: Rename Group"
+      },
+      {
+        "command": "delphiDcc.moveGroupUp",
+        "title": "Delphi DCC Builder: Move Group Up",
+        "icon": "$(arrow-up)"
+      },
+      {
+        "command": "delphiDcc.moveGroupDown",
+        "title": "Delphi DCC Builder: Move Group Down",
+        "icon": "$(arrow-down)"
+      },
+      {
+        "command": "delphiDcc.addProjects",
+        "title": "Delphi DCC Builder: Add Dproj Projects",
+        "icon": "$(file-add)"
+      },
+      {
+        "command": "delphiDcc.activateConfiguration",
+        "title": "Delphi DCC Builder: Activate Configuration"
+      },
+      {
+        "command": "delphiDcc.showOutputPaths",
+        "title": "Delphi DCC Builder: Show Current Output Paths"
+      },
       {
         "command": "delphiXe7.buildProject",
         "title": "Delphi DCC Builder: Build for Win32",
@@ -69,6 +115,50 @@
       }
     ],
     "menus": {
+      "view/title": [
+        {
+          "command": "delphiDcc.createGroup",
+          "when": "view == delphiDccProjects",
+          "group": "navigation@1"
+        },
+        {
+          "command": "delphiDcc.sortGroups",
+          "when": "view == delphiDccProjects",
+          "group": "navigation@2"
+        },
+        {
+          "command": "delphiDcc.refreshProjects",
+          "when": "view == delphiDccProjects",
+          "group": "navigation@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "delphiDcc.addProjects",
+          "when": "view == delphiDccProjects && viewItem == delphiProjectGroup",
+          "group": "inline@1"
+        },
+        {
+          "command": "delphiDcc.renameGroup",
+          "when": "view == delphiDccProjects && viewItem == delphiProjectGroup",
+          "group": "navigation@1"
+        },
+        {
+          "command": "delphiDcc.moveGroupUp",
+          "when": "view == delphiDccProjects && viewItem == delphiProjectGroup",
+          "group": "navigation@2"
+        },
+        {
+          "command": "delphiDcc.moveGroupDown",
+          "when": "view == delphiDccProjects && viewItem == delphiProjectGroup",
+          "group": "navigation@3"
+        },
+        {
+          "command": "delphiDcc.showOutputPaths",
+          "when": "view == delphiDccProjects && viewItem == delphiGroupedProject",
+          "group": "navigation@1"
+        }
+      ],
       "explorer/context": [
         {
           "command": "delphiXe7.buildProject",
@@ -89,6 +179,25 @@
           "command": "delphiXe7.showBuildPlan",
           "when": "resourceExtname == .dproj && config.delphiXe7.showBuildPlanMenu == show",
           "group": "navigation@13"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "delphiDcc",
+          "title": "Delphi Projects",
+          "icon": "images/activitybar.svg"
+        }
+      ]
+    },
+    "views": {
+      "delphiDcc": [
+        {
+          "id": "delphiDccProjects",
+          "name": "Projects",
+          "contextualTitle": "Delphi Projects",
+          "visibility": "visible"
         }
       ]
     },

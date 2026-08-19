@@ -30,6 +30,8 @@ interface ExtensionManifest {
         when?: string;
       }>;
     };
+    viewsContainers?: { activitybar?: Array<{ id: string; title: string; icon: string }> };
+    views?: Record<string, Array<{ id: string; name: string }>>;
   };
 }
 
@@ -48,6 +50,15 @@ describe("extension manifest", () => {
     expect(manifest.author).toBe("Alex Niu");
     expect(manifest.contributes.configuration.title).toBe("Delphi DCC Builder");
     expect(manifest.contributes.commands.map((item) => item.command)).toEqual([
+      "delphiDcc.createGroup",
+      "delphiDcc.sortGroups",
+      "delphiDcc.refreshProjects",
+      "delphiDcc.renameGroup",
+      "delphiDcc.moveGroupUp",
+      "delphiDcc.moveGroupDown",
+      "delphiDcc.addProjects",
+      "delphiDcc.activateConfiguration",
+      "delphiDcc.showOutputPaths",
       "delphiXe7.buildProject",
       "delphiXe7.buildProjectWin64",
       "delphiXe7.rebuildProject",
@@ -56,6 +67,15 @@ describe("extension manifest", () => {
       "delphiXe7.changeOutputPath"
     ]);
     expect(manifest.contributes.commands.map((item) => item.title)).toEqual([
+      "Delphi DCC Builder: New Group",
+      "Delphi DCC Builder: Sort Groups",
+      "Delphi DCC Builder: Refresh Projects",
+      "Delphi DCC Builder: Rename Group",
+      "Delphi DCC Builder: Move Group Up",
+      "Delphi DCC Builder: Move Group Down",
+      "Delphi DCC Builder: Add Dproj Projects",
+      "Delphi DCC Builder: Activate Configuration",
+      "Delphi DCC Builder: Show Current Output Paths",
       "Delphi DCC Builder: Build for Win32",
       "Delphi DCC Builder: Build for Win64",
       "Delphi DCC Builder: Rebuild for Win32",
@@ -98,6 +118,20 @@ describe("extension manifest", () => {
     expect(menu[3].when).toContain("config.delphiXe7.showBuildPlanMenu == show");
     expect(manifest.contributes.configuration.properties["delphiXe7.showBuildPlanMenu"])
       .toMatchObject({ default: "hide", enum: ["hide", "show"] });
+  });
+
+  it("registers a Delphi Projects activity bar view", () => {
+    expect(manifest.contributes.viewsContainers?.activitybar).toContainEqual({
+      id: "delphiDcc",
+      title: "Delphi Projects",
+      icon: "images/activitybar.svg"
+    });
+    expect(manifest.contributes.views?.delphiDcc).toEqual(
+      expect.arrayContaining([expect.objectContaining({
+        id: "delphiDccProjects",
+        name: "Projects"
+      })])
+    );
   });
 
   it("limits per-project output path history through settings", () => {
