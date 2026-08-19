@@ -9,6 +9,7 @@
   "command.moveGroupUp": "分组上移",
   "command.moveGroupDown": "分组下移",
   "command.addProjects": "添加 Dproj 项目",
+  "command.addProjectFromExplorer": "添加到 Delphi 项目分组",
   "command.activateConfiguration": "激活配置",
   "command.showOutputPaths": "查看当前输出路径",
   "command.buildWin32": "编译 Win32",

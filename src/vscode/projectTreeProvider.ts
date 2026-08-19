@@ -186,6 +186,17 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
     }
   }
 
+  public async addProjectFromExplorer(argument: unknown): Promise<void> {
+    if (!(argument instanceof vscode.Uri)) {
+      throw new Error(localize("group.error.dprojOnly"));
+    }
+    const group = await this.resolveGroup(undefined);
+    if (!group) {
+      return;
+    }
+    await this.save(addProjectToGroup(this.groups, group.id, argument.fsPath));
+  }
+
   public async activateConfiguration(argument: unknown): Promise<void> {
     const reference = readConfigurationReference(argument);
     if (!reference) {
@@ -484,6 +495,9 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
     if (this.groups.length === 0) {
       void vscode.window.showInformationMessage(localize("tree.group.createFirst"));
       return undefined;
+    }
+    if (this.groups.length === 1) {
+      return this.groups[0];
     }
     const selected = await vscode.window.showQuickPick(
       this.groups.map((group) => ({

@@ -75,6 +75,7 @@ describe("extension manifest", () => {
       "delphiDcc.moveGroupUp",
       "delphiDcc.moveGroupDown",
       "delphiDcc.addProjects",
+      "delphiDcc.addProjectFromExplorer",
       "delphiDcc.activateConfiguration",
       "delphiDcc.showOutputPaths",
       "delphiXe7.buildProject",
@@ -93,6 +94,7 @@ describe("extension manifest", () => {
       "Move Group Up",
       "Move Group Down",
       "Add Dproj Projects",
+      "Add to Delphi Project Group",
       "Activate Configuration",
       "Show Current Output Paths",
       "Build for Win32",
@@ -129,14 +131,16 @@ describe("extension manifest", () => {
   it("shows Win64 in the context menu only when DCC64 is configured", () => {
     const menu = manifest.contributes.menus["explorer/context"];
     expect(menu.map((item) => item.command)).toEqual([
+      "delphiDcc.addProjectFromExplorer",
       "delphiXe7.buildProject",
       "delphiXe7.buildProjectWin64",
       "delphiXe7.changeOutputPath",
       "delphiXe7.showBuildPlan"
     ]);
-    expect(menu[1].when).toContain("config.delphiXe7.compiler64Path");
-    expect(menu[2].when).toBe("resourceExtname == .dproj");
-    expect(menu[3].when).toContain("config.delphiXe7.showBuildPlanMenu == show");
+    expect(menu[0].when).toBe("resourceExtname == .dproj");
+    expect(menu[2].when).toContain("config.delphiXe7.compiler64Path");
+    expect(menu[3].when).toBe("resourceExtname == .dproj");
+    expect(menu[4].when).toContain("config.delphiXe7.showBuildPlanMenu == show");
     expect(manifest.contributes.configuration.properties["delphiXe7.showBuildPlanMenu"])
       .toMatchObject({ default: "hide", enum: ["hide", "show"] });
   });

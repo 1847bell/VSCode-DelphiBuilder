@@ -2,7 +2,7 @@
   "name": "delphi-dcc-builder",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.2.11",
+  "version": "0.2.12",
   "icon": "images/icon.png",
   "publisher": "1847bell",
   "author": "Alex Niu",
@@ -32,6 +32,7 @@
     "onCommand:delphiDcc.openSettings",
     "onCommand:delphiDcc.createGroup",
     "onCommand:delphiDcc.addProjects",
+    "onCommand:delphiDcc.addProjectFromExplorer",
     "onCommand:delphiDcc.activateConfiguration",
     "onCommand:delphiXe7.buildProject",
     "onCommand:delphiXe7.buildProjectWin64",
@@ -86,6 +87,12 @@
       {
         "command": "delphiDcc.addProjects",
         "title": "%command.addProjects%",
+        "category": "%extension.displayName%",
+        "icon": "$(file-add)"
+      },
+      {
+        "command": "delphiDcc.addProjectFromExplorer",
+        "title": "%command.addProjectFromExplorer%",
         "category": "%extension.displayName%",
         "icon": "$(file-add)"
       },
@@ -187,6 +194,11 @@
         }
       ],
       "explorer/context": [
+        {
+          "command": "delphiDcc.addProjectFromExplorer",
+          "when": "resourceExtname == .dproj",
+          "group": "navigation@9"
+        },
         {
           "command": "delphiXe7.buildProject",
           "when": "resourceExtname == .dproj",
