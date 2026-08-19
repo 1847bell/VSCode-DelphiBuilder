@@ -7,6 +7,7 @@ import {
   ProjectConfiguration,
   ProjectResourceItem
 } from "../core/types";
+import { localize } from "../localization/localizer";
 import { ConditionSyntaxError, evaluateCondition } from "./conditionEvaluator";
 import { expandMsBuildProperties, expandProperties, PropertyBag } from "./propertyResolver";
 
@@ -41,7 +42,7 @@ export function evaluateDproj(
   const document = parser.parse(content) as OrderedNode[];
   const projectNode = findElement(document, "Project");
   if (!projectNode) {
-    throw new Error(`Invalid dproj file: Project root element was not found in ${projectFile}`);
+    throw new Error(localize("dproj.error.rootMissing", { project: projectFile }));
   }
 
   const projectChildren = getChildren(projectNode);
@@ -58,9 +59,9 @@ export function evaluateDproj(
       evaluatePropertyGroup(node, properties, warnings);
     } else if (name === "Import") {
       const project = getAttribute(node, "Project") ?? "(unknown)";
-      warnings.push(`MSBuild import is not evaluated by the direct DCC argument parser: ${project}`);
+      warnings.push(localize("dproj.warning.import", { project }));
     } else if (name === "Target") {
-      warnings.push("MSBuild Target elements are not executed by direct DCC builds.");
+      warnings.push(localize("dproj.warning.target"));
     }
   }
 
@@ -69,7 +70,7 @@ export function evaluateDproj(
   let mainSourceValue = properties.get("MainSource")?.trim();
   if (!mainSourceValue) {
     mainSourceValue = `${path.basename(projectFile, path.extname(projectFile))}.dpr`;
-    warnings.push(`MainSource is missing; using ${mainSourceValue}.`);
+    warnings.push(localize("dproj.warning.mainSource", { source: mainSourceValue }));
   }
   const expandedMainSource = expandProperties(mainSourceValue, properties);
   addUnresolvedWarnings(expandedMainSource.unresolved, "MainSource", warnings);
@@ -172,9 +173,10 @@ function selectConfiguration(
       (item) => item.name.toLocaleLowerCase() === requested.toLocaleLowerCase()
     );
     if (!match && selectable.length > 0) {
-      throw new Error(
-        `Configuration '${requested}' is not defined. Available configurations: ${selectable.map((item) => item.name).join(", ")}`
-      );
+      throw new Error(localize("dproj.error.configurationUndefined", {
+        configuration: requested,
+        available: selectable.map((item) => item.name).join(", ")
+      }));
     }
     return match?.name ?? requested;
   }
@@ -235,7 +237,7 @@ function evaluatePropertyGroup(
     const expanded = expandMsBuildProperties(rawValue, properties);
     for (const name of expanded.unresolved) {
       if (name.toLocaleLowerCase() !== propertyName.toLocaleLowerCase()) {
-        warnings.push(`Undefined property $(${name}) was treated as empty while evaluating ${propertyName}.`);
+        warnings.push(localize("dproj.warning.undefinedProperty", { name, property: propertyName }));
       }
     }
     properties.set(propertyName, expanded.value);
@@ -251,7 +253,10 @@ function tryEvaluateCondition(
     return evaluateCondition(condition, properties);
   } catch (error) {
     if (error instanceof ConditionSyntaxError) {
-      warnings.push(`Unsupported Condition '${condition}': ${error.message}`);
+      warnings.push(localize("dproj.warning.unsupportedCondition", {
+        condition: condition ?? "",
+        message: error.message
+      }));
       return false;
     }
     throw error;
@@ -260,7 +265,7 @@ function tryEvaluateCondition(
 
 function addUnresolvedWarnings(names: string[], source: string, warnings: string[]): void {
   for (const name of names) {
-    warnings.push(`Unresolved property $(${name}) in ${source}.`);
+    warnings.push(localize("dproj.warning.unresolvedProperty", { name, source }));
   }
 }
 

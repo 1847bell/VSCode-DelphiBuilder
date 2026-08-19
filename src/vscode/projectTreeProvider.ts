@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import * as vscode from "vscode";
 import { DelphiPlatform } from "../core/types";
+import { localize } from "../localization/localizer";
 import { discoverConfigurations, evaluateDproj } from "../project/dprojParser";
 import {
   addProjectGroup,
@@ -111,8 +112,8 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
 
   public async createGroup(): Promise<void> {
     const name = await vscode.window.showInputBox({
-      title: "New Delphi Project Group",
-      prompt: "Enter a group name",
+      title: localize("tree.newGroup.title"),
+      prompt: localize("tree.newGroup.prompt"),
       validateInput: (value) => this.validateGroupName(value)
     });
     if (name === undefined) {
@@ -127,8 +128,8 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
       return;
     }
     const name = await vscode.window.showInputBox({
-      title: "Rename Delphi Project Group",
-      prompt: "Enter a new group name",
+      title: localize("tree.renameGroup.title"),
+      prompt: localize("tree.renameGroup.prompt"),
       value: group.name,
       valueSelection: [0, group.name.length],
       validateInput: (value) => this.validateGroupName(value, group.id)
@@ -157,12 +158,12 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
       return;
     }
     const selected = await vscode.window.showOpenDialog({
-      title: `Add Delphi Projects to ${group.name}`,
+      title: localize("tree.addProjects.title", { group: group.name }),
       defaultUri: vscode.workspace.workspaceFolders?.[0]?.uri,
       canSelectFiles: true,
       canSelectFolders: false,
       canSelectMany: true,
-      filters: { "Delphi Projects": ["dproj"] }
+      filters: { [localize("tree.addProjects.filter")]: ["dproj"] }
     });
     if (!selected?.length) {
       return;
@@ -188,11 +189,11 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
   public async activateConfiguration(argument: unknown): Promise<void> {
     const reference = readConfigurationReference(argument);
     if (!reference) {
-      throw new Error("The selected configuration is no longer available.");
+      throw new Error(localize("tree.error.configurationUnavailable"));
     }
     const project = this.findProject(reference);
     if (!project) {
-      throw new Error("The selected project is no longer in this workspace view.");
+      throw new Error(localize("tree.error.projectNotInView"));
     }
     const content = await readProjectContent(project.filePath);
     const configuration = discoverConfigurations(content).find((item) => (
@@ -200,7 +201,9 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
       && item.name.toLocaleLowerCase() !== "base"
     ));
     if (!configuration) {
-      throw new Error(`Configuration '${reference.configuration}' is no longer defined.`);
+      throw new Error(localize("tree.error.configurationMissing", {
+        configuration: reference.configuration
+      }));
     }
     await this.save(setActiveProjectConfiguration(
       this.groups,
@@ -213,11 +216,11 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
   public async showOutputPaths(argument: unknown): Promise<void> {
     const reference = readProjectReference(argument);
     if (!reference) {
-      throw new Error("The selected project is no longer available.");
+      throw new Error(localize("tree.error.projectUnavailable"));
     }
     const project = this.findProject(reference);
     if (!project) {
-      throw new Error("The selected project is no longer in this workspace view.");
+      throw new Error(localize("tree.error.projectNotInView"));
     }
     const details = await this.readProjectDetails(project);
     if (details.error) {
@@ -230,8 +233,8 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
         detail: `${details.activeConfiguration}|${platform}`
       })),
       {
-        title: `Current Output Paths: ${path.basename(project.filePath)}`,
-        placeHolder: "Output paths for the active configuration",
+        title: localize("tree.outputPaths.title", { project: path.basename(project.filePath) }),
+        placeHolder: localize("tree.outputPaths.placeholder"),
         matchOnDescription: true,
         matchOnDetail: true
       }
@@ -285,7 +288,10 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
     const item = new vscode.TreeItem(node.group.name, vscode.TreeItemCollapsibleState.Collapsed);
     (item as TreeItemWithReference).groupId = node.group.id;
     item.id = `delphi-group:${node.group.id}`;
-    item.description = `${node.group.projects.length} project${node.group.projects.length === 1 ? "" : "s"}`;
+    item.description = localize(
+      node.group.projects.length === 1 ? "tree.projectCount.one" : "tree.projectCount.other",
+      { count: node.group.projects.length }
+    );
     item.contextValue = "delphiProjectGroup";
     item.iconPath = new vscode.ThemeIcon("folder-library");
     return item;
@@ -301,11 +307,13 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
     (item as TreeItemWithReference).projectFile = node.project.filePath;
     item.resourceUri = vscode.Uri.file(node.project.filePath);
     item.description = node.details.error
-      ? "Unavailable"
-      : node.details.activeConfiguration || "No configurations";
+      ? localize("common.unavailable")
+      : node.details.activeConfiguration || localize("tree.noConfigurations");
     item.tooltip = node.details.error
       ? `${node.project.filePath}\n${node.details.error}`
-      : `${node.project.filePath}\nActive: ${node.details.activeConfiguration}`;
+      : `${node.project.filePath}\n${localize("tree.activeConfiguration", {
+        configuration: node.details.activeConfiguration
+      })}`;
     item.contextValue = "delphiGroupedProject";
     if (node.details.error) {
       item.iconPath = new vscode.ThemeIcon("warning", new vscode.ThemeColor("problemsWarningIcon.foreground"));
@@ -328,11 +336,11 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
     const collapsibleState = node.details.configurations.length > 0
       ? vscode.TreeItemCollapsibleState.Collapsed
       : vscode.TreeItemCollapsibleState.None;
-    const item = new vscode.TreeItem("Configurations", collapsibleState);
+    const item = new vscode.TreeItem(localize("tree.configurations"), collapsibleState);
     item.id = `delphi-configurations:${node.groupId}:${projectKey(node.project.filePath)}`;
     item.description = node.details.configurations.length > 0
       ? node.details.activeConfiguration
-      : "None found";
+      : localize("common.noneFound");
     item.iconPath = new vscode.ThemeIcon("settings-gear");
     item.contextValue = "delphiConfigurations";
     return item;
@@ -341,12 +349,12 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
   private getConfigurationTreeItem(node: ConfigurationNode): vscode.TreeItem {
     const item = new vscode.TreeItem(node.configuration, vscode.TreeItemCollapsibleState.None);
     item.id = `delphi-configuration:${node.groupId}:${projectKey(node.project.filePath)}:${node.configuration}`;
-    item.description = node.active ? "Active" : undefined;
+    item.description = node.active ? localize("common.active") : undefined;
     item.iconPath = new vscode.ThemeIcon(node.active ? "check" : "circle-outline");
     item.contextValue = node.active ? "delphiConfigurationActive" : "delphiConfiguration";
     item.command = {
       command: "delphiDcc.activateConfiguration",
-      title: "Activate Configuration",
+      title: localize("tree.activateConfiguration"),
       arguments: [{
         groupId: node.groupId,
         projectFile: node.project.filePath,
@@ -371,32 +379,32 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
       {
         kind: "action",
         id: `delphi-build-win32:${key}`,
-        label: "Build Win32",
+        label: localize("tree.buildWin32"),
         description: node.details.activeConfiguration,
         icon: "tools",
         command: {
           command: "delphiXe7.buildProject",
-          title: "Build Win32",
+          title: localize("tree.buildWin32"),
           arguments: [buildOptions("Win32")]
         }
       },
       {
         kind: "action",
         id: `delphi-build-win64:${key}`,
-        label: "Build Win64",
+        label: localize("tree.buildWin64"),
         description: node.details.activeConfiguration,
         icon: "tools",
         command: {
           command: "delphiXe7.buildProjectWin64",
-          title: "Build Win64",
+          title: localize("tree.buildWin64"),
           arguments: [buildOptions("Win64")]
         }
       },
       {
         kind: "action",
         id: `delphi-output-path:${key}`,
-        label: "Current Output Path",
-        description: node.details.error ? "Unavailable" : node.details.outputPaths.Win32,
+        label: localize("tree.currentOutputPath"),
+        description: node.details.error ? localize("common.unavailable") : node.details.outputPaths.Win32,
         tooltip: node.details.error
           ? node.details.error
           : `${node.details.activeConfiguration}|Win32: ${node.details.outputPaths.Win32}\n`
@@ -404,19 +412,19 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
         icon: "folder-opened",
         command: {
           command: "delphiDcc.showOutputPaths",
-          title: "Show Current Output Paths",
+          title: localize("tree.showOutputPaths"),
           arguments: [reference]
         }
       },
       {
         kind: "action",
         id: `delphi-change-output-path:${key}`,
-        label: "Change Output Path",
+        label: localize("tree.changeOutputPath"),
         description: node.details.activeConfiguration,
         icon: "edit",
         command: {
           command: "delphiXe7.changeOutputPath",
-          title: "Change Output Path",
+          title: localize("tree.changeOutputPath"),
           arguments: [{
             project: node.project.filePath,
             configuration: node.details.activeConfiguration
@@ -469,21 +477,24 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
     if (groupId) {
       const group = this.groups.find((item) => item.id === groupId);
       if (!group) {
-        throw new Error("The selected project group no longer exists.");
+        throw new Error(localize("tree.error.groupMissing"));
       }
       return group;
     }
     if (this.groups.length === 0) {
-      void vscode.window.showInformationMessage("Create a Delphi project group first.");
+      void vscode.window.showInformationMessage(localize("tree.group.createFirst"));
       return undefined;
     }
     const selected = await vscode.window.showQuickPick(
       this.groups.map((group) => ({
         label: group.name,
-        description: `${group.projects.length} project${group.projects.length === 1 ? "" : "s"}`,
+        description: localize(
+          group.projects.length === 1 ? "tree.projectCount.one" : "tree.projectCount.other",
+          { count: group.projects.length }
+        ),
         group
       })),
-      { placeHolder: "Select a Delphi project group" }
+      { placeHolder: localize("tree.group.select") }
     );
     return selected?.group;
   }
@@ -498,12 +509,12 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
   private validateGroupName(value: string, excludedGroupId?: string): string | undefined {
     const name = value.trim();
     if (!name) {
-      return "The group name cannot be empty.";
+      return localize("group.error.nameEmpty");
     }
     if (this.groups.some((group) => (
       group.id !== excludedGroupId && group.name.toLocaleLowerCase() === name.toLocaleLowerCase()
     ))) {
-      return `A group named '${name}' already exists.`;
+      return localize("group.error.nameDuplicate", { name });
     }
     return undefined;
   }

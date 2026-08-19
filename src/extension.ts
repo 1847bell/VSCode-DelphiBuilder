@@ -1,11 +1,13 @@
 import * as vscode from "vscode";
 import { BuildCommands, CancellationError } from "./commands/buildCommands";
+import { localize, resolveLanguage, setLanguage } from "./localization/localizer";
 import { DelphiProjectTreeProvider } from "./vscode/projectTreeProvider";
 
 let commands: BuildCommands | undefined;
 let projectTree: DelphiProjectTreeProvider | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
+  updateLanguage();
   const output = vscode.window.createOutputChannel("Delphi DCC Builder");
   commands = new BuildCommands(output, context.globalState, context.workspaceState);
   projectTree = new DelphiProjectTreeProvider(context.workspaceState);
@@ -19,6 +21,14 @@ export function activate(context: vscode.ExtensionContext): void {
     commands,
     projectTree,
     treeView,
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (!event.affectsConfiguration("delphiDcc.language")) {
+        return;
+      }
+      updateLanguage();
+      commands!.refreshLocalizedUi();
+      projectTree!.refresh();
+    }),
     vscode.commands.registerCommand("delphiDcc.createGroup", () => runSafely(output, () => projectTree!.createGroup())),
     vscode.commands.registerCommand("delphiDcc.renameGroup", (argument) => runSafely(output, () => projectTree!.renameGroup(argument))),
     vscode.commands.registerCommand("delphiDcc.moveGroupUp", (argument) => runSafely(output, () => projectTree!.moveGroup(argument, "up"))),
@@ -51,8 +61,13 @@ async function runSafely(output: vscode.OutputChannel, action: () => Promise<voi
       return;
     }
     const message = error instanceof Error ? error.message : String(error);
-    output.appendLine(`Error: ${message}`);
+    output.appendLine(localize("common.error", { message }));
     output.show(true);
-    void vscode.window.showErrorMessage(`Delphi DCC Builder: ${message}`);
+    void vscode.window.showErrorMessage(localize("common.errorNotification", { message }));
   }
+}
+
+function updateLanguage(): void {
+  const configured = vscode.workspace.getConfiguration("delphiDcc").get<unknown>("language", "en");
+  setLanguage(resolveLanguage(configured));
 }

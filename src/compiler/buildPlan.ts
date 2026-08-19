@@ -8,6 +8,7 @@ import {
   ResourceBuildStep
 } from "../core/types";
 import { DEFAULT_DELPHI_VERSION, getDelphiVersionConfiguration } from "../delphi/versions";
+import { localize } from "../localization/localizer";
 import {
   BdsEnvironment,
   resolveBdsEnvironment,
@@ -110,16 +111,16 @@ async function createResourcePlan(
       ...evaluation.resourceItems.map((item) => item.include),
       ...(projectResource ? [projectResource.output] : [])
     ];
-    warnings.push(
-      `Resource preprocessing is disabled; existing .res files are required for: ${required.join(", ")}`
-    );
+    warnings.push(localize("buildPlan.warning.resourceDisabled", {
+      resources: required.join(", ")
+    }));
     return {};
   }
 
   if (rcItems.length > 0) {
-    warnings.push(
-      `Direct resource preprocessing does not generate RcItem project resources; existing project resources are required for: ${rcItems.map((item) => item.include).join(", ")}`
-    );
+    warnings.push(localize("buildPlan.warning.rcItem", {
+      resources: rcItems.map((item) => item.include).join(", ")
+    }));
   }
   if (rcCompileItems.length === 0) {
     return rcItems.length === 0 ? { projectResource } : {};
@@ -127,7 +128,9 @@ async function createResourcePlan(
 
   const compilerToUse = evaluation.properties.BRCC_CompilerToUse?.trim();
   if (compilerToUse && compilerToUse.toLocaleLowerCase() !== "brcc32") {
-    throw new Error(`Unsupported BRCC_CompilerToUse for direct resource preprocessing: ${compilerToUse}`);
+    throw new Error(localize("buildPlan.error.unsupportedResourceCompiler", {
+      compiler: compilerToUse
+    }));
   }
   const resolution = await resolveResourceCompilerPath(
     options.brcc32Path,
@@ -140,13 +143,21 @@ async function createResourcePlan(
     ).settingsSection;
     const attempted = resolution.candidates.length > 0
       ? resolution.candidates.slice(0, 10).map((candidate) => `  ${candidate}`).join("\n")
-      : "  No candidates could be derived from the BDS root or PATH.";
+      : localize("buildPlan.error.noCandidates");
     throw new Error([
-      `Resource build is required for ${path.basename(evaluation.projectFile)}, but BRCC32.exe was not found.`,
-      `rsvars.bat: ${bds.rsVarsPath}${bds.rsVarsFound ? "" : " (not found)"}`,
-      "Tried BRCC32:",
+      localize("buildPlan.error.resourceRequired", {
+        project: path.basename(evaluation.projectFile)
+      }),
+      localize("buildPlan.error.rsvars", {
+        path: bds.rsVarsPath,
+        missing: bds.rsVarsFound ? "" : localize("buildPlan.error.rsvarsMissing")
+      }),
+      localize("buildPlan.error.tried"),
       attempted,
-      `Set '${settingsSection}.brcc32Path' or '${settingsSection}.rsvarsPath'.`
+      localize("buildPlan.error.configure", {
+        brccSetting: `${settingsSection}.brcc32Path`,
+        rsvarsSetting: `${settingsSection}.rsvarsPath`
+      })
     ].join("\n"));
   }
 
@@ -191,7 +202,7 @@ async function createResourcePlan(
   }
   for (const propertyName of ["BRCC_UserSuppliedOptions", "BRCC_ResponseFilename"]) {
     if (evaluation.properties[propertyName]?.trim()) {
-      warnings.push(`${propertyName} is not applied by direct BRCC32 resource preprocessing.`);
+      warnings.push(localize("buildPlan.warning.resourceProperty", { property: propertyName }));
     }
   }
 

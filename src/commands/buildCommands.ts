@@ -7,6 +7,7 @@ import { CompilerRunner } from "../compiler/compilerRunner";
 import { parseCompilerDiagnostics } from "../compiler/diagnosticParser";
 import { OutputEncodingSetting, resolveOutputEncoding } from "../compiler/outputEncoding";
 import { BuildPlan, DelphiPlatform, DelphiVersion } from "../core/types";
+import { localize } from "../localization/localizer";
 import {
   getDelphiVersionConfiguration,
   resolveDelphiVersion
@@ -49,10 +50,12 @@ export class BuildCommands implements vscode.Disposable {
     private readonly globalState: vscode.Memento,
     private readonly workspaceState: vscode.Memento
   ) {
-    this.statusBar.text = "$(tools) Delphi DCC Builder";
-    this.statusBar.tooltip = "Build a Delphi Win32 project";
-    this.statusBar.command = "delphiXe7.buildProject";
+    this.updateStatusBar();
     this.statusBar.show();
+  }
+
+  public refreshLocalizedUi(): void {
+    this.updateStatusBar();
   }
 
   public async build(
@@ -61,7 +64,7 @@ export class BuildCommands implements vscode.Disposable {
     forcedPlatform?: DelphiPlatform
   ): Promise<void> {
     if (!vscode.workspace.isTrusted) {
-      throw new Error("Building requires a Trusted Workspace.");
+      throw new Error(localize("build.error.trustedWorkspace"));
     }
 
     const commandOptions = parseCommandOptions(argument);
@@ -70,11 +73,13 @@ export class BuildCommands implements vscode.Disposable {
     const version = this.resolveVersion(projectFile);
     const projectKey = normalizeProjectKey(projectFile);
     if (this.runners.has(projectKey)) {
-      throw new Error(`A build is already running for ${path.basename(projectFile)}.`);
+      throw new Error(localize("build.error.alreadyRunning", {
+        project: path.basename(projectFile)
+      }));
     }
 
     const compilerPath = this.resolveCompilerPath(projectFile, platform, version);
-    const action = `${rebuild ? "Rebuild" : "Build"} Project ${platform}`;
+    const action = localize(rebuild ? "build.action.rebuild" : "build.action.build", { platform });
     const configuration = await this.resolveConfiguration(
       projectFile,
       commandOptions.configuration,
@@ -104,7 +109,9 @@ export class BuildCommands implements vscode.Disposable {
       const encoding = await resolveOutputEncoding(encodingSetting);
       const result = await vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
-        title: `${rebuild ? "Rebuilding" : "Building"} ${path.basename(projectFile)}`,
+        title: localize(rebuild ? "build.progress.rebuilding" : "build.progress.building", {
+          project: path.basename(projectFile)
+        }),
         cancellable: true
       }, async (_progress, cancellationToken) => {
         const cancellation = cancellationToken.onCancellationRequested(() => void runner.cancel());
@@ -124,28 +131,44 @@ export class BuildCommands implements vscode.Disposable {
       const duration = (result.durationMs / 1000).toFixed(1);
 
       if (result.cancelled) {
-        this.output.appendLine(`\nBuild cancelled after ${duration}s.`);
-        void vscode.window.showInformationMessage("Delphi build cancelled.");
+        this.output.appendLine(`\n${localize("build.cancelled.output", { duration })}`);
+        void vscode.window.showInformationMessage(localize("build.cancelled.notification"));
       } else if (result.exitCode !== 0) {
-        const stage = result.stage === "resource" ? "Resource build" : "Delphi build";
+        const stage = localize(
+          result.stage === "resource" ? "build.failure.stage.resource" : "build.failure.stage.compiler"
+        );
         this.output.appendLine(
-          `\n${stage} failed with exit code ${result.exitCode}: ${errors} errors, ${warnings} warnings.`
+          `\n${localize("build.failure.output", {
+            stage,
+            exitCode: result.exitCode ?? "",
+            errors,
+            warnings
+          })}`
         );
         void vscode.window.showErrorMessage(
           result.stage === "resource"
-            ? "Delphi resource build failed. See the Delphi DCC Builder output for details."
-            : `Delphi build failed: ${errors} errors, ${warnings} warnings`
+            ? localize("build.failure.resourceNotification")
+            : localize("build.failure.compilerNotification", { errors, warnings })
         );
       } else {
         const artifact = plan.expectedArtifacts.find(existsSync);
         if (!artifact && plan.expectedArtifacts.length > 0) {
-          this.output.appendLine(`Expected output was not found: ${plan.expectedArtifacts.join(", ")}`);
+          this.output.appendLine(localize("build.output.expectedMissing", {
+            paths: plan.expectedArtifacts.join(", ")
+          }));
         }
-        this.output.appendLine(`\nBuild succeeded in ${duration}s${artifact ? `: ${artifact}` : "."}`);
-        const message = `Delphi build succeeded in ${duration}s${artifact ? `: ${artifact}` : ""}`;
+        this.output.appendLine(`\n${localize("build.success.output", {
+          duration,
+          artifact: artifact ? `: ${artifact}` : "."
+        })}`);
+        const message = localize("build.success.notification", {
+          duration,
+          artifact: artifact ? `: ${artifact}` : ""
+        });
         if (artifact) {
-          void vscode.window.showInformationMessage(message, "Show Output").then((action) => {
-            if (action === "Show Output") {
+          const showOutput = localize("build.showOutput");
+          void vscode.window.showInformationMessage(message, showOutput).then((action) => {
+            if (action === showOutput) {
               return vscode.commands.executeCommand("revealFileInOS", vscode.Uri.file(artifact));
             }
             return undefined;
@@ -169,7 +192,7 @@ export class BuildCommands implements vscode.Disposable {
     const configuration = await this.resolveConfiguration(
       projectFile,
       commandOptions.configuration,
-      "Show Build Plan",
+      localize("build.action.showPlan"),
       platform
     );
     const plan = await this.makePlan(
@@ -198,7 +221,7 @@ export class BuildCommands implements vscode.Disposable {
     const configuration = await this.resolveConfiguration(
       projectFile,
       commandOptions.configuration,
-      "Change Output Path",
+      localize("build.action.changeOutputPath"),
       platform,
       initialContent
     );
@@ -226,7 +249,10 @@ export class BuildCommands implements vscode.Disposable {
       item.name.toLocaleLowerCase() === configuration.toLocaleLowerCase()
     ));
     if (!configurationDefinition) {
-      throw new Error(`Configuration '${configuration}' is no longer defined in ${path.basename(projectFile)}.`);
+      throw new Error(localize("build.error.configurationMissing", {
+        configuration,
+        project: path.basename(projectFile)
+      }));
     }
 
     const latestEvaluation = evaluateDproj(latestContent, projectFile, {
@@ -247,7 +273,7 @@ export class BuildCommands implements vscode.Disposable {
     });
     const effectiveOutputPath = updatedEvaluation.properties.DCC_ExeOutput?.trim();
     if (!effectiveOutputPath) {
-      throw new Error("The updated output path is not effective for the selected configuration and platform.");
+      throw new Error(localize("build.error.outputPathIneffective"));
     }
 
     await this.writeProjectContent(projectFile, latestContent, updatedContent);
@@ -261,7 +287,11 @@ export class BuildCommands implements vscode.Disposable {
       )
     );
     void vscode.window.showInformationMessage(
-      `Output path updated for ${configurationDefinition.name}|${platform}: ${outputPath}`
+      localize("build.outputPath.updated", {
+        configuration: configurationDefinition.name,
+        platform,
+        path: outputPath
+      })
     );
   }
 
@@ -275,7 +305,7 @@ export class BuildCommands implements vscode.Disposable {
       : [...this.runners.values()];
     const cancelled = await Promise.all(targets.map((runner) => runner.cancel()));
     if (!cancelled.some(Boolean)) {
-      void vscode.window.showInformationMessage("No Delphi build is currently running.");
+      void vscode.window.showInformationMessage(localize("build.noRunning"));
     }
   }
 
@@ -325,7 +355,7 @@ export class BuildCommands implements vscode.Disposable {
     if (options.project) {
       const project = resolveConfiguredPath(options.project);
       if (!isDproj(project)) {
-        throw new Error(`Expected a .dproj project file, received: ${project}`);
+        throw new Error(localize("build.error.expectedDproj", { project }));
       }
       return project;
     }
@@ -337,7 +367,7 @@ export class BuildCommands implements vscode.Disposable {
 
     const projects = await vscode.workspace.findFiles("**/*.dproj", "**/{node_modules,.git}/**");
     if (projects.length === 0) {
-      throw new Error("No .dproj file was found in the workspace.");
+      throw new Error(localize("build.error.noProject"));
     }
     if (projects.length === 1) {
       return this.rememberProject(projects[0].fsPath);
@@ -367,7 +397,7 @@ export class BuildCommands implements vscode.Disposable {
     historyItems: readonly ProjectQuickPickItem[]
   ): Promise<ProjectQuickPickItem> {
     const picker = vscode.window.createQuickPick<ProjectQuickPickItem>();
-    picker.placeholder = "Select a Delphi project";
+    picker.placeholder = localize("build.projectPicker.placeholder");
     picker.items = historyItems;
 
     return new Promise<ProjectQuickPickItem>((resolve, reject) => {
@@ -424,7 +454,9 @@ export class BuildCommands implements vscode.Disposable {
     const configurations = discoverConfigurations(projectContent ?? await readFile(projectFile, "utf8"))
       .filter((item) => item.name.toLocaleLowerCase() !== "base");
     if (configurations.length === 0) {
-      throw new Error(`No build configurations were found in ${path.basename(projectFile)}.`);
+      throw new Error(localize("build.error.noConfigurations", {
+        project: path.basename(projectFile)
+      }));
     }
     if (configurations.length === 1) {
       return configurations[0].name;
@@ -432,11 +464,18 @@ export class BuildCommands implements vscode.Disposable {
 
     const selected = await vscode.window.showQuickPick(
       configurations.map((item) => ({
-        label: `${action} ${item.name}`,
+        label: localize("build.configurationPicker.label", {
+          action,
+          configuration: item.name
+        }),
         description: `${item.name}|${platform}`,
         configuration: item.name
       })),
-      { placeHolder: `Select a configuration for ${path.basename(projectFile)}` }
+      {
+        placeHolder: localize("build.configurationPicker.placeholder", {
+          project: path.basename(projectFile)
+        })
+      }
     );
     if (!selected) {
       throw new CancellationError();
@@ -462,10 +501,12 @@ export class BuildCommands implements vscode.Disposable {
       description: string;
       platform: DelphiPlatform;
     }>([
-      { label: "Win32", description: "DCC32 output", platform: "Win32" },
-      { label: "Win64", description: "DCC64 output", platform: "Win64" }
+      { label: "Win32", description: localize("build.platformPicker.win32"), platform: "Win32" },
+      { label: "Win64", description: localize("build.platformPicker.win64"), platform: "Win64" }
     ], {
-      placeHolder: `Select a platform for ${path.basename(projectFile)}`
+      placeHolder: localize("build.platformPicker.placeholder", {
+        project: path.basename(projectFile)
+      })
     });
     if (!selected) {
       throw new CancellationError();
@@ -504,21 +545,21 @@ export class BuildCommands implements vscode.Disposable {
     }
 
     const picker = vscode.window.createQuickPick<OutputPathItem>();
-    picker.title = `Change Output Path: ${path.basename(projectFile)}`;
-    picker.placeholder = `Output path for ${configuration}|${platform}`;
+    picker.title = localize("build.outputPath.title", { project: path.basename(projectFile) });
+    picker.placeholder = localize("build.outputPath.placeholder", { configuration, platform });
     picker.matchOnDescription = true;
 
     const refreshItems = (value: string): void => {
       const input = value.trim();
       const inputItem = input
-        ? [{ label: input, description: "Current input", outputPath: input }]
+        ? [{ label: input, description: localize("build.outputPath.currentInput"), outputPath: input }]
         : [];
       const normalizedInput = input.toLocaleLowerCase();
       const historyItems = history
         .filter((item) => item.trim() && item.trim().toLocaleLowerCase() !== normalizedInput)
         .map((item) => ({
           label: item,
-          description: "Recent output path",
+          description: localize("build.outputPath.recent"),
           outputPath: item,
           alwaysShow: true
         }));
@@ -535,7 +576,7 @@ export class BuildCommands implements vscode.Disposable {
         picker.onDidAccept(() => {
           const outputPath = picker.activeItems[0]?.outputPath ?? picker.value.trim();
           if (!outputPath) {
-            picker.placeholder = "Output path cannot be empty.";
+            picker.placeholder = localize("build.outputPath.empty");
             return;
           }
           accepted = true;
@@ -569,7 +610,9 @@ export class BuildCommands implements vscode.Disposable {
     const document = findOpenDocument(projectFile);
     if (document) {
       if (document.getText() !== originalContent) {
-        throw new Error(`${path.basename(projectFile)} changed while the output path was being updated. Try again.`);
+        throw new Error(localize("build.error.projectChanged", {
+          project: path.basename(projectFile)
+        }));
       }
       const edit = new vscode.WorkspaceEdit();
       edit.replace(
@@ -578,17 +621,23 @@ export class BuildCommands implements vscode.Disposable {
         updatedContent
       );
       if (!await vscode.workspace.applyEdit(edit)) {
-        throw new Error(`Could not update ${path.basename(projectFile)}.`);
+        throw new Error(localize("build.error.projectUpdate", {
+          project: path.basename(projectFile)
+        }));
       }
       if (!await document.save()) {
-        throw new Error(`Could not save ${path.basename(projectFile)}.`);
+        throw new Error(localize("build.error.projectSave", {
+          project: path.basename(projectFile)
+        }));
       }
       return;
     }
 
     const diskContent = await readFile(projectFile, "utf8");
     if (diskContent !== originalContent) {
-      throw new Error(`${path.basename(projectFile)} changed while the output path was being updated. Try again.`);
+      throw new Error(localize("build.error.projectChanged", {
+        project: path.basename(projectFile)
+      }));
     }
     await writeFile(projectFile, updatedContent, "utf8");
   }
@@ -613,36 +662,49 @@ export class BuildCommands implements vscode.Disposable {
       .get<string>(settingName, "")
       .trim();
     if (!compilerPath) {
-      throw new Error(
-        `${compilerName} compiler path is not configured. Set '${versionConfiguration.settingsSection}.${settingName}' before building.`
-      );
+      throw new Error(localize("build.error.compilerRequired", {
+        setting: `${versionConfiguration.settingsSection}.${settingName}`,
+        compiler: compilerName
+      }));
     }
     return compilerPath;
   }
 
   private writePlanSummary(plan: BuildPlan, rebuild: boolean): void {
     this.output.appendLine("");
-    this.output.appendLine(`=== Delphi DCC Builder ${rebuild ? "Rebuild" : "Build"}: ${path.basename(plan.projectFile)} ===`);
-    this.output.appendLine(`Delphi version: ${plan.version}`);
-    this.output.appendLine(`Configuration: ${plan.configuration}|${plan.platform}`);
-    this.output.appendLine(`Working directory: ${plan.workingDirectory}`);
-    this.output.appendLine(`Compiler: ${plan.compilerPath}`);
-    this.output.appendLine(`Arguments: ${plan.arguments.map(quoteForDisplay).join(" ")}`);
+    const heading = localize(
+      rebuild ? "build.summary.heading.rebuild" : "build.summary.heading.build"
+    );
+    this.output.appendLine(`=== Delphi DCC Builder ${heading}: ${path.basename(plan.projectFile)} ===`);
+    this.output.appendLine(localize("build.summary.version", { version: plan.version }));
+    this.output.appendLine(localize("build.summary.configuration", {
+      configuration: plan.configuration,
+      platform: plan.platform
+    }));
+    this.output.appendLine(localize("build.summary.workingDirectory", { path: plan.workingDirectory }));
+    this.output.appendLine(localize("build.summary.compiler", { path: plan.compilerPath }));
+    this.output.appendLine(localize("build.summary.arguments", {
+      arguments: plan.arguments.map(quoteForDisplay).join(" ")
+    }));
     if (plan.projectResource) {
-      this.output.appendLine(`Project resource: ${plan.projectResource.output} (created only when missing)`);
+      this.output.appendLine(localize("build.summary.projectResource", {
+        path: plan.projectResource.output
+      }));
     }
     if (plan.resourceBuild) {
       for (const step of plan.resourceBuild) {
-        this.output.appendLine(`Resource builder: ${step.executable}`);
-        this.output.appendLine(`Resource input: ${step.input}`);
-        this.output.appendLine(`Resource output: ${step.output}`);
+        this.output.appendLine(localize("build.summary.resourceBuilder", { path: step.executable }));
+        this.output.appendLine(localize("build.summary.resourceInput", { path: step.input }));
+        this.output.appendLine(localize("build.summary.resourceOutput", { path: step.output }));
         this.output.appendLine(
-          `Resource arguments: ${step.arguments.map(quoteForDisplay).join(" ")}`
+          localize("build.summary.resourceArguments", {
+            arguments: step.arguments.map(quoteForDisplay).join(" ")
+          })
         );
       }
     }
     for (const warning of plan.warnings) {
-      this.output.appendLine(`Warning: ${warning}`);
+      this.output.appendLine(localize("common.warning", { message: warning }));
     }
     this.output.appendLine("");
   }
@@ -650,11 +712,14 @@ export class BuildCommands implements vscode.Disposable {
   private updateStatusBar(): void {
     if (this.runners.size > 0) {
       this.statusBar.text = "$(sync~spin) Delphi DCC Builder";
-      this.statusBar.tooltip = `${this.runners.size} Delphi build${this.runners.size === 1 ? "" : "s"} running`;
+      this.statusBar.tooltip = localize(
+        this.runners.size === 1 ? "status.running.one" : "status.running.other",
+        { count: this.runners.size }
+      );
       this.statusBar.command = "delphiXe7.cancelBuild";
     } else {
       this.statusBar.text = "$(tools) Delphi DCC Builder";
-      this.statusBar.tooltip = "Build a Delphi Win32 project";
+      this.statusBar.tooltip = localize("status.ready");
       this.statusBar.command = "delphiXe7.buildProject";
     }
   }
@@ -680,7 +745,7 @@ function resolveConfiguredPath(value: string): string {
   }
   const workspace = vscode.workspace.workspaceFolders?.[0];
   if (!workspace) {
-    throw new Error(`A relative project path requires an open workspace: ${value}`);
+    throw new Error(localize("build.error.relativeProject", { path: value }));
   }
   return path.resolve(workspace.uri.fsPath, value);
 }
@@ -707,7 +772,7 @@ function resolvePlatform(platform: string | undefined): DelphiPlatform {
   if (platform.toLocaleLowerCase() === "win64") {
     return "Win64";
   }
-  throw new Error(`Only the Win32 and Win64 platforms are supported, received '${platform}'.`);
+  throw new Error(localize("build.error.unsupportedPlatform", { platform }));
 }
 
 function quoteForDisplay(argument: string): string {

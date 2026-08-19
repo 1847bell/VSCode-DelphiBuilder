@@ -20,6 +20,7 @@ interface ExtensionManifest {
         type?: string;
         default?: unknown;
         enum?: unknown[];
+        enumItemLabels?: unknown[];
         minimum?: number;
         maximum?: number;
       }>;
@@ -38,17 +39,28 @@ interface ExtensionManifest {
 const manifest = JSON.parse(
   readFileSync(path.resolve("package.json"), "utf8")
 ) as ExtensionManifest;
+const englishNls = JSON.parse(
+  readFileSync(path.resolve("package.nls.json"), "utf8")
+) as Record<string, string>;
+const chineseNls = JSON.parse(
+  readFileSync(path.resolve("package.nls.zh-cn.json"), "utf8")
+) as Record<string, string>;
+
+function resolveEnglish(value: string): string {
+  const key = /^%(.+)%$/.exec(value)?.[1];
+  return key ? englishNls[key] ?? value : value;
+}
 
 describe("extension manifest", () => {
   it("uses the expected branding and command labels", () => {
     expect(manifest.name).toBe("delphi-dcc-builder");
-    expect(manifest.displayName).toBe("Delphi DCC Builder");
-    expect(manifest.description).toBe(
+    expect(resolveEnglish(manifest.displayName)).toBe("Delphi DCC Builder");
+    expect(resolveEnglish(manifest.description)).toBe(
       "Build Delphi Win32 and Win64 projects with DCC32 and DCC64 from Visual Studio Code."
     );
     expect(manifest.publisher).toBe("1847bell");
     expect(manifest.author).toBe("Alex Niu");
-    expect(manifest.contributes.configuration.title).toBe("Delphi DCC Builder");
+    expect(resolveEnglish(manifest.contributes.configuration.title)).toBe("Delphi DCC Builder");
     expect(manifest.contributes.commands.map((item) => item.command)).toEqual([
       "delphiDcc.createGroup",
       "delphiDcc.sortGroups",
@@ -66,7 +78,7 @@ describe("extension manifest", () => {
       "delphiXe7.showBuildPlan",
       "delphiXe7.changeOutputPath"
     ]);
-    expect(manifest.contributes.commands.map((item) => item.title)).toEqual([
+    expect(manifest.contributes.commands.map((item) => resolveEnglish(item.title))).toEqual([
       "Delphi DCC Builder: New Group",
       "Delphi DCC Builder: Sort Groups",
       "Delphi DCC Builder: Refresh Projects",
@@ -123,15 +135,28 @@ describe("extension manifest", () => {
   it("registers a Delphi Projects activity bar view", () => {
     expect(manifest.contributes.viewsContainers?.activitybar).toContainEqual({
       id: "delphiDcc",
-      title: "Delphi Projects",
+      title: "%viewContainer.delphiProjects%",
       icon: "images/activitybar.svg"
     });
     expect(manifest.contributes.views?.delphiDcc).toEqual(
       expect.arrayContaining([expect.objectContaining({
         id: "delphiDccProjects",
-        name: "Projects"
+      name: "%view.projects%"
       })])
     );
+  });
+
+  it("offers English and Simplified Chinese as the runtime language setting", () => {
+    const language = manifest.contributes.configuration.properties["delphiDcc.language"];
+    expect(language).toMatchObject({
+      type: "string",
+      enum: ["en", "zh-cn"],
+      default: "en",
+      scope: "window"
+    });
+    expect(language.enumItemLabels).toEqual(["%language.english%", "%language.chinese%"]);
+    expect(chineseNls["configuration.language.description"]).toContain("运行时界面");
+    expect(chineseNls["command.buildWin32"]).toContain("编译 Win32");
   });
 
   it("limits per-project output path history through settings", () => {

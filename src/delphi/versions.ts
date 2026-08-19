@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { DelphiPlatform, DelphiVersion } from "../core/types";
+import { localize } from "../localization/localizer";
 
 export interface DccPathSwitchConfiguration {
   switch: string;
@@ -56,9 +57,10 @@ export function resolveDelphiVersion(value: string | undefined): DelphiVersion {
   if (configuration) {
     return configuration.version;
   }
-  throw new Error(
-    `Unsupported Delphi version: ${requested}. Available versions: ${getSupportedDelphiVersions().join(", ")}.`
-  );
+  throw new Error(localize("version.error.unsupported", {
+    version: requested,
+    supported: getSupportedDelphiVersions().join(", ")
+  }));
 }
 
 export function getDelphiVersionConfiguration(
@@ -80,12 +82,12 @@ function loadVersionConfigurations(): Map<string, DelphiVersionConfiguration> {
     const value = JSON.parse(readFileSync(file, "utf8")) as unknown;
     const configuration = validateVersionConfiguration(value, fileName);
     if (configurations.has(configuration.version)) {
-      throw new Error(`Duplicate Delphi version configuration: ${configuration.version}.`);
+      throw new Error(localize("version.error.duplicate", { version: configuration.version }));
     }
     configurations.set(configuration.version, configuration);
   }
   if (configurations.size === 0) {
-    throw new Error(`No Delphi version configurations were found in ${directory}.`);
+    throw new Error(localize("version.error.none", { directory }));
   }
   return configurations;
 }
@@ -97,7 +99,9 @@ function findVersionConfigurationDirectory(): string {
   ];
   const directory = candidates.find(existsSync);
   if (!directory) {
-    throw new Error(`Delphi version configuration directory was not found: ${candidates.join(", ")}.`);
+    throw new Error(localize("version.error.directoryMissing", {
+      directories: candidates.join(", ")
+    }));
   }
   return directory;
 }
@@ -107,7 +111,7 @@ function validateVersionConfiguration(
   fileName: string
 ): DelphiVersionConfiguration {
   if (!isRecord(value)) {
-    throw new Error(`Invalid Delphi version configuration ${fileName}: expected an object.`);
+    throw new Error(localize("version.error.invalidObject", { file: fileName }));
   }
   const requiredStrings = [
     "version",
@@ -118,13 +122,13 @@ function validateVersionConfiguration(
   ];
   for (const property of requiredStrings) {
     if (typeof value[property] !== "string" || !value[property].trim()) {
-      throw new Error(`Invalid Delphi version configuration ${fileName}: ${property} is required.`);
+      throw new Error(localize("version.error.required", { file: fileName, property }));
     }
   }
   if (!isRecord(value.compilerSettingNames)
     || !isRecord(value.compilerFileNames)
     || !isRecord(value.dcc)) {
-    throw new Error(`Invalid Delphi version configuration ${fileName}: compiler and DCC mappings are required.`);
+    throw new Error(localize("version.error.mappings", { file: fileName }));
   }
   return value as unknown as DelphiVersionConfiguration;
 }

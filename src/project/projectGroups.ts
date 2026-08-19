@@ -1,4 +1,5 @@
 import path from "node:path";
+import { localize } from "../localization/localizer";
 
 export const PROJECT_GROUPS_STATE_KEY = "delphiDcc.projectGroups";
 
@@ -63,7 +64,7 @@ export function addProjectGroup(
 ): ProjectGroup[] {
   const normalizedName = requireUniqueGroupName(groups, name);
   if (!id.trim() || groups.some((group) => group.id === id)) {
-    throw new Error("The group id must be non-empty and unique.");
+    throw new Error(localize("group.error.id"));
   }
   return [...groups, { id, name: normalizedName, projects: [] }];
 }
@@ -85,7 +86,7 @@ export function moveProjectGroup(
 ): ProjectGroup[] {
   const index = groups.findIndex((group) => group.id === groupId);
   if (index < 0) {
-    throw new Error("The project group no longer exists.");
+    throw new Error(localize("group.error.missing"));
   }
   const target = direction === "up" ? index - 1 : index + 1;
   if (target < 0 || target >= groups.length) {
@@ -112,11 +113,13 @@ export function addProjectToGroup(
   const group = requireGroup(groups, groupId);
   const normalizedPath = readProjectPath(filePath);
   if (!normalizedPath) {
-    throw new Error("Only .dproj project files can be added.");
+    throw new Error(localize("group.error.dprojOnly"));
   }
   const key = projectKey(normalizedPath);
   if (groups.some((item) => item.projects.some((project) => projectKey(project.filePath) === key))) {
-    throw new Error(`${path.basename(normalizedPath)} is already in a project group.`);
+    throw new Error(localize("group.error.projectDuplicate", {
+      project: path.basename(normalizedPath)
+    }));
   }
   return groups.map((item) => (
     item === group
@@ -135,10 +138,10 @@ export function setActiveProjectConfiguration(
   const key = projectKey(filePath);
   const activeConfiguration = configuration.trim();
   if (!activeConfiguration) {
-    throw new Error("The active configuration cannot be empty.");
+    throw new Error(localize("group.error.configurationEmpty"));
   }
   if (!group.projects.some((project) => projectKey(project.filePath) === key)) {
-    throw new Error("The project no longer exists in this group.");
+    throw new Error(localize("group.error.projectMissing"));
   }
   return groups.map((item) => (
     item === group
@@ -157,7 +160,7 @@ export function setActiveProjectConfiguration(
 function requireGroup(groups: readonly ProjectGroup[], groupId: string): ProjectGroup {
   const group = groups.find((item) => item.id === groupId);
   if (!group) {
-    throw new Error("The project group no longer exists.");
+    throw new Error(localize("group.error.missing"));
   }
   return group;
 }
@@ -169,11 +172,11 @@ function requireUniqueGroupName(
 ): string {
   const normalized = name.trim();
   if (!normalized) {
-    throw new Error("The group name cannot be empty.");
+    throw new Error(localize("group.error.nameEmpty"));
   }
   const key = normalized.toLocaleLowerCase();
   if (groups.some((group) => group.id !== excludedGroupId && group.name.toLocaleLowerCase() === key)) {
-    throw new Error(`A group named '${normalized}' already exists.`);
+    throw new Error(localize("group.error.nameDuplicate", { name: normalized }));
   }
   return normalized;
 }

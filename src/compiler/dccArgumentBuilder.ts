@@ -5,6 +5,7 @@ import {
   getDelphiVersionConfiguration
 } from "../delphi/versions";
 import { expandProperties, PropertyBag } from "../project/propertyResolver";
+import { localize } from "../localization/localizer";
 
 export interface DccArgumentOptions {
   version?: DelphiVersion;
@@ -116,7 +117,7 @@ export function buildDccArguments(
     const knownMetadata = dccConfiguration.knownMetadata
       .some((item) => item.toLocaleLowerCase() === normalized);
     if (normalized.startsWith("dcc_") && !handled.has(normalized) && !knownMetadata) {
-      warnings.push(`DCC property is not mapped to a compiler argument: ${name}`);
+      warnings.push(localize("dcc.warning.unmapped", { property: name }));
     }
   }
 
@@ -160,8 +161,11 @@ function addConfiguredArguments(
       args.push(...mappedArguments);
     } else {
       warnings.push(rule.kind === "boolean"
-        ? `Unsupported boolean value for ${rule.property}: ${value}`
-        : `Unsupported ${rule.property} value: ${value}`);
+        ? localize("dcc.warning.unsupportedBoolean", { property: rule.property, value })
+        : localize("dcc.warning.unsupportedEnum", {
+          property: rule.property,
+          value
+        }));
     }
   }
   handled.add(rule.property.toLocaleLowerCase());
@@ -223,7 +227,10 @@ function parseOptionalBoolean(
   }
   const enabled = parseBoolean(value);
   if (enabled === undefined) {
-    warnings.push(`Unsupported boolean value for ${propertyName}: ${value}`);
+    warnings.push(localize("dcc.warning.unsupportedBoolean", {
+      property: propertyName,
+      value
+    }));
   }
   return enabled;
 }

@@ -1,5 +1,6 @@
 import path from "node:path";
 import { DelphiPlatform } from "../core/types";
+import { localize } from "../localization/localizer";
 
 export const DEFAULT_OUTPUT_PATH_HISTORY_LIMIT = 5;
 export const MIN_OUTPUT_PATH_HISTORY_LIMIT = 1;
@@ -20,7 +21,7 @@ export function updateDprojOutputPath(
 ): string {
   const outputPath = options.outputPath.trim();
   if (!outputPath) {
-    throw new Error("Output path cannot be empty.");
+    throw new Error(localize("outputPath.error.empty"));
   }
 
   const groups = [...content.matchAll(/<PropertyGroup\b([^>]*)>[\s\S]*?<\/PropertyGroup\s*>/gi)];
@@ -154,7 +155,7 @@ function upsertOutputPath(group: string, outputPath: string, newline: string): s
 
   const closing = /<\/PropertyGroup\s*>/i.exec(group);
   if (!closing?.index) {
-    throw new Error("Invalid dproj PropertyGroup: closing element was not found.");
+    throw new Error(localize("outputPath.error.propertyGroup"));
   }
   const openingEnd = group.indexOf(">");
   const body = group.slice(openingEnd + 1, closing.index);
@@ -175,7 +176,7 @@ function insertOutputPathGroup(
   const closingMatches = [...content.matchAll(/<\/Project\s*>/gi)];
   const closing = closingMatches.at(-1);
   if (closing?.index === undefined) {
-    throw new Error("Invalid dproj file: Project closing element was not found.");
+    throw new Error(localize("outputPath.error.projectClosing"));
   }
 
   const newline = detectNewline(content);

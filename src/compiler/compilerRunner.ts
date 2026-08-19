@@ -4,6 +4,7 @@ import path from "node:path";
 import { finished } from "node:stream/promises";
 import iconv from "iconv-lite";
 import { BuildPlan, BuildResult } from "../core/types";
+import { localize } from "../localization/localizer";
 
 export class CompilerRunner {
   private child: ChildProcessWithoutNullStreams | undefined;
@@ -19,14 +20,17 @@ export class CompilerRunner {
     onOutput: (text: string) => void
   ): Promise<BuildResult> {
     if (this.child) {
-      throw new Error("This compiler runner is already running.");
+      throw new Error(localize("compiler.error.alreadyRunning"));
     }
-    await assertFileExists(plan.compilerPath, path.basename(plan.compilerPath) || "Delphi compiler");
-    await assertFileExists(plan.mainSource, "Main source");
+    await assertFileExists(
+      plan.compilerPath,
+      path.basename(plan.compilerPath) || localize("compiler.label.delphi")
+    );
+    await assertFileExists(plan.mainSource, localize("compiler.label.mainSource"));
     if (plan.resourceBuild) {
       for (const step of plan.resourceBuild) {
         await assertFileExists(step.executable, "BRCC32.exe");
-        await assertFileExists(step.input, "Resource source");
+        await assertFileExists(step.input, localize("compiler.label.resourceSource"));
       }
     }
     await prepareOutputDirectories(plan);
@@ -41,11 +45,16 @@ export class CompilerRunner {
 
     if (plan.projectResource) {
       const created = await ensureProjectResource(plan.projectResource.output);
-      capture(`[Project Resource] ${created ? "Created" : "Using existing"} ${plan.projectResource.output}\n`);
+      capture(`${localize("compiler.output.projectResource", {
+        action: localize(created ? "compiler.output.created" : "compiler.output.existing"),
+        path: plan.projectResource.output
+      })}\n`);
     }
 
     for (const step of plan.resourceBuild ?? []) {
-      capture(`[Resource Build] ${path.basename(step.input)}\n`);
+      capture(`${localize("compiler.output.resourceBuild", {
+        source: path.basename(step.input)
+      })}\n`);
       const resourceResult = await this.runProcess(
         step.executable,
         step.arguments,
@@ -64,7 +73,9 @@ export class CompilerRunner {
       }
     }
 
-    capture(`[Delphi Compile] ${path.basename(plan.compilerPath)}\n`);
+    capture(`${localize("compiler.output.delphiCompile", {
+      compiler: path.basename(plan.compilerPath)
+    })}\n`);
     const compilerResult = await this.runProcess(
       plan.compilerPath,
       plan.arguments,
@@ -149,7 +160,7 @@ async function assertFileExists(file: string, label: string): Promise<void> {
   try {
     await access(file);
   } catch {
-    throw new Error(`${label} was not found: ${file}`);
+    throw new Error(localize("compiler.error.fileMissing", { label, file }));
   }
 }
 

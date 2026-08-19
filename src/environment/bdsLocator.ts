@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import iconv from "iconv-lite";
 import { DelphiPlatform, DelphiVersion } from "../core/types";
+import { localize } from "../localization/localizer";
 import {
   DEFAULT_DELPHI_VERSION,
   getDelphiVersionConfiguration
@@ -54,7 +55,7 @@ export async function resolveBdsEnvironment(
     : path.join(rootDir, "bin", "rsvars.bat");
   const rsVarsContent = await readOptionalFile(rsVarsPath);
   if (configuredRsVarsPath && rsVarsContent === undefined) {
-    throw new Error(`Configured rsvars.bat was not found: ${rsVarsPath}`);
+    throw new Error(localize("bds.error.rsvarsMissing", { path: rsVarsPath }));
   }
   const rsVars = rsVarsContent === undefined
     ? {}
@@ -92,30 +93,35 @@ export async function resolveBdsEnvironment(
   const debugDcuPath = expandedDebugDcuPath.value;
 
   if (!registryRoot && !compilerOverride?.trim()) {
-    warnings.push(
-      `BDS ${versionConfiguration.bdsRegistryVersion} RootDir was not found in the 32-bit registry view; using the default ${version} path.`
-    );
+    warnings.push(localize("bds.warning.root", {
+      registryVersion: versionConfiguration.bdsRegistryVersion,
+      version
+    }));
   }
   if (rsVarsContent === undefined) {
-    warnings.push(`rsvars.bat was not found: ${rsVarsPath}`);
+    warnings.push(localize("bds.warning.rsvars", { path: rsVarsPath }));
   }
   if (!await exists(compilerPath)) {
-    warnings.push(`${compilerName} was not found: ${compilerPath}`);
+    warnings.push(localize("bds.warning.compiler", {
+      compiler: compilerName,
+      path: compilerPath
+    }));
   }
   if (!libraryPath) {
-    warnings.push(
-      `The BDS ${versionConfiguration.bdsRegistryVersion} ${platform} Library Search Path was not found in the registry.`
-    );
+    warnings.push(localize("bds.warning.libraryPath", {
+      registryVersion: versionConfiguration.bdsRegistryVersion,
+      platform
+    }));
   }
   for (const name of expandedLibraryPath.unresolved) {
-    warnings.push(`Unresolved BDS Library Path property: $(${name}).`);
+    warnings.push(localize("bds.warning.libraryProperty", { name }));
   }
   for (const name of expandedDebugDcuPath.unresolved) {
-    warnings.push(`Unresolved BDS Debug DCU Path property: $(${name}).`);
+    warnings.push(localize("bds.warning.debugProperty", { name }));
   }
   for (const [name, value] of Object.entries(variables)) {
     if (/\$\([^)]+\)|%[^%]+%/.test(value)) {
-      warnings.push(`Unresolved BDS environment variable reference in ${name}: ${value}`);
+      warnings.push(localize("bds.warning.environment", { name, value }));
     }
   }
 
@@ -145,7 +151,7 @@ export async function resolveResourceCompilerPath(
   if (configured) {
     const resolved = path.resolve(configured);
     if (!await exists(resolved)) {
-      throw new Error(`Configured BRCC32.exe was not found: ${resolved}`);
+      throw new Error(localize("bds.error.brccMissing", { path: resolved }));
     }
     return { path: resolved, candidates: [resolved] };
   }

@@ -1,7 +1,7 @@
 {
   "name": "delphi-dcc-builder",
-  "displayName": "Delphi DCC Builder",
-  "description": "Build Delphi Win32 and Win64 projects with DCC32 and DCC64 from Visual Studio Code.",
+  "displayName": "%extension.displayName%",
+  "description": "%extension.description%",
   "version": "0.2.10",
   "icon": "images/icon.png",
   "publisher": "1847bell",
@@ -43,74 +43,74 @@
     "commands": [
       {
         "command": "delphiDcc.createGroup",
-        "title": "Delphi DCC Builder: New Group",
+        "title": "%command.newGroup%",
         "icon": "$(new-folder)"
       },
       {
         "command": "delphiDcc.sortGroups",
-        "title": "Delphi DCC Builder: Sort Groups",
+        "title": "%command.sortGroups%",
         "icon": "$(sort-precedence)"
       },
       {
         "command": "delphiDcc.refreshProjects",
-        "title": "Delphi DCC Builder: Refresh Projects",
+        "title": "%command.refreshProjects%",
         "icon": "$(refresh)"
       },
       {
         "command": "delphiDcc.renameGroup",
-        "title": "Delphi DCC Builder: Rename Group"
+        "title": "%command.renameGroup%"
       },
       {
         "command": "delphiDcc.moveGroupUp",
-        "title": "Delphi DCC Builder: Move Group Up",
+        "title": "%command.moveGroupUp%",
         "icon": "$(arrow-up)"
       },
       {
         "command": "delphiDcc.moveGroupDown",
-        "title": "Delphi DCC Builder: Move Group Down",
+        "title": "%command.moveGroupDown%",
         "icon": "$(arrow-down)"
       },
       {
         "command": "delphiDcc.addProjects",
-        "title": "Delphi DCC Builder: Add Dproj Projects",
+        "title": "%command.addProjects%",
         "icon": "$(file-add)"
       },
       {
         "command": "delphiDcc.activateConfiguration",
-        "title": "Delphi DCC Builder: Activate Configuration"
+        "title": "%command.activateConfiguration%"
       },
       {
         "command": "delphiDcc.showOutputPaths",
-        "title": "Delphi DCC Builder: Show Current Output Paths"
+        "title": "%command.showOutputPaths%"
       },
       {
         "command": "delphiXe7.buildProject",
-        "title": "Delphi DCC Builder: Build for Win32",
+        "title": "%command.buildWin32%",
         "icon": "$(tools)"
       },
       {
         "command": "delphiXe7.buildProjectWin64",
-        "title": "Delphi DCC Builder: Build for Win64",
+        "title": "%command.buildWin64%",
         "icon": "$(tools)"
       },
       {
         "command": "delphiXe7.rebuildProject",
-        "title": "Delphi DCC Builder: Rebuild for Win32",
+        "title": "%command.rebuildWin32%",
         "icon": "$(sync)"
       },
       {
         "command": "delphiXe7.cancelBuild",
-        "title": "Delphi DCC Builder: Cancel Build",
+        "title": "%command.cancelBuild%",
         "icon": "$(debug-stop)"
       },
       {
         "command": "delphiXe7.showBuildPlan",
-        "title": "Delphi DCC Builder: Show Build Plan",
+        "title": "%command.showBuildPlan%",
         "icon": "$(list-tree)"
       },
       {
         "command": "delphiXe7.changeOutputPath",
-        "title": "Delphi DCC Builder: Change Output Path",
+        "title": "%command.changeOutputPath%",
         "icon": "$(folder-opened)"
       }
     ],
@@ -186,7 +186,7 @@
       "activitybar": [
         {
           "id": "delphiDcc",
-          "title": "Delphi Projects",
+          "title": "%viewContainer.delphiProjects%",
           "icon": "images/activitybar.svg"
         }
       ]
@@ -195,56 +195,70 @@
       "delphiDcc": [
         {
           "id": "delphiDccProjects",
-          "name": "Projects",
-          "contextualTitle": "Delphi Projects",
+          "name": "%view.projects%",
+          "contextualTitle": "%viewContainer.delphiProjects%",
           "visibility": "visible"
         }
       ]
     },
     "configuration": {
-      "title": "Delphi DCC Builder",
+      "title": "%extension.displayName%",
       "properties": {
+        "delphiDcc.language": {
+          "type": "string",
+          "enum": [
+            "en",
+            "zh-cn"
+          ],
+          "enumItemLabels": [
+            "%language.english%",
+            "%language.chinese%"
+          ],
+          "default": "en",
+          "scope": "window",
+          "description": "%configuration.language.description%"
+        },
         "delphiDcc.version": {
           "type": "string",
           "enum": [
             "XE7"
           ],
           "enumItemLabels": [
-            "Delphi XE7"
+            "%delphi.version.xe7%"
           ],
           "default": "XE7",
           "scope": "resource",
-          "description": "Delphi compiler version used to resolve version-specific build settings and BDS environment values."
+          "description": "%configuration.version.description%"
         },
         "delphiDcc.resourceBuild": {
           "type": "boolean",
           "default": true,
           "scope": "resource",
-          "description": "Prepare missing project resources and compile .dproj RcCompile resources before running DCC."
+          "description": "%configuration.resourceBuild.description%"
         },
         "delphiXe7.compilerPath": {
           "type": "string",
           "default": "",
           "scope": "resource",
-          "description": "Required absolute path to the Delphi XE7 DCC32.exe. Builds fail when this setting is empty."
+          "description": "%configuration.compilerPath.description%"
         },
         "delphiXe7.compiler64Path": {
           "type": "string",
           "default": "",
           "scope": "resource",
-          "description": "Optional absolute path to the Delphi XE7 DCC64.exe. The Win64 Explorer build command is shown when this setting is not empty."
+          "description": "%configuration.compiler64Path.description%"
         },
         "delphiXe7.rsvarsPath": {
           "type": "string",
           "default": "",
           "scope": "resource",
-          "description": "Optional absolute path to rsvars.bat. Leave empty to discover it from the configured compiler or BDS installation."
+          "description": "%configuration.rsvarsPath.description%"
         },
         "delphiXe7.brcc32Path": {
           "type": "string",
           "default": "",
           "scope": "resource",
-          "description": "Optional absolute path to BRCC32.exe used to compile RcCompile resources. Leave empty to discover it from the Delphi installation or PATH."
+          "description": "%configuration.brcc32Path.description%"
         },
         "delphiXe7.showBuildPlanMenu": {
           "type": "string",
@@ -253,12 +267,12 @@
             "show"
           ],
           "enumItemLabels": [
-            "Hide",
-            "Show"
+            "%enum.hide%",
+            "%enum.show%"
           ],
           "default": "hide",
           "scope": "resource",
-          "description": "Show or hide the Show Build Plan command in the .dproj Explorer context menu."
+          "description": "%configuration.showBuildPlanMenu.description%"
         },
         "delphiXe7.outputPathHistoryLimit": {
           "type": "integer",
@@ -266,7 +280,7 @@
           "minimum": 1,
           "maximum": 15,
           "scope": "resource",
-          "description": "Maximum number of output path history entries stored for each .dproj project."
+          "description": "%configuration.outputPathHistoryLimit.description%"
         },
         "delphiXe7.outputEncoding": {
           "type": "string",
@@ -277,7 +291,7 @@
           ],
           "default": "system",
           "scope": "resource",
-          "description": "Encoding used to decode DCC32 or DCC64 output."
+          "description": "%configuration.outputEncoding.description%"
         },
         "delphiXe7.additionalArguments": {
           "type": "array",
@@ -286,7 +300,7 @@
           },
           "default": [],
           "scope": "resource",
-          "description": "Additional DCC arguments appended before the main source file."
+          "description": "%configuration.additionalArguments.description%"
         },
         "delphiXe7.environment": {
           "type": "object",
@@ -295,7 +309,7 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Environment variables applied to DCC32 or DCC64 after the selected Delphi version's registry environment."
+          "description": "%configuration.environment.description%"
         }
       }
     }

@@ -1,4 +1,5 @@
 import { expandMsBuildProperties, PropertyBag } from "./propertyResolver";
+import { localize } from "../localization/localizer";
 
 type TokenType = "string" | "word" | "eq" | "ne" | "and" | "or" | "lparen" | "rparen" | "eof";
 
@@ -66,7 +67,7 @@ class Lexer {
       value += current;
       this.offset += 1;
     }
-    throw new ConditionSyntaxError("Unterminated string literal");
+    throw new ConditionSyntaxError(localize("condition.error.unterminated"));
   }
 
   private readWord(): Token {
@@ -75,7 +76,9 @@ class Lexer {
       this.offset += 1;
     }
     if (start === this.offset) {
-      throw new ConditionSyntaxError(`Unexpected character '${this.input[this.offset]}'`);
+      throw new ConditionSyntaxError(localize("condition.error.character", {
+        character: this.input[this.offset]
+      }));
     }
     const value = this.input.slice(start, this.offset);
     const keyword = value.toLocaleLowerCase();
@@ -99,7 +102,9 @@ class Parser {
   public parse(): boolean {
     const result = this.parseOr();
     if (this.current.type !== "eof") {
-      throw new ConditionSyntaxError(`Unexpected token '${this.current.value}'`);
+      throw new ConditionSyntaxError(localize("condition.error.token", {
+        token: this.current.value
+      }));
     }
     return result;
   }
@@ -145,7 +150,9 @@ class Parser {
 
   private parseOperand(): string {
     if (this.current.type !== "string" && this.current.type !== "word") {
-      throw new ConditionSyntaxError(`Expected a value, found '${this.current.value}'`);
+      throw new ConditionSyntaxError(localize("condition.error.expectedValue", {
+        value: this.current.value
+      }));
     }
     const value = this.current.value;
     this.advance();
@@ -154,7 +161,10 @@ class Parser {
 
   private expect(type: TokenType): void {
     if (this.current.type !== type) {
-      throw new ConditionSyntaxError(`Expected ${type}, found '${this.current.value}'`);
+      throw new ConditionSyntaxError(localize("condition.error.expected", {
+        type,
+        value: this.current.value
+      }));
     }
     this.advance();
   }
