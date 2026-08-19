@@ -2,7 +2,7 @@
   "name": "delphi-dcc-builder",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "icon": "images/icon.png",
   "publisher": "1847bell",
   "author": "Alex Niu",
@@ -29,6 +29,7 @@
   "main": "./dist/extension.js",
   "activationEvents": [
     "onView:delphiDccProjects",
+    "onCommand:delphiDcc.openSettings",
     "onCommand:delphiDcc.createGroup",
     "onCommand:delphiDcc.addProjects",
     "onCommand:delphiDcc.activateConfiguration",
@@ -44,73 +45,94 @@
       {
         "command": "delphiDcc.createGroup",
         "title": "%command.newGroup%",
+        "category": "%extension.displayName%",
         "icon": "$(new-folder)"
       },
       {
         "command": "delphiDcc.sortGroups",
         "title": "%command.sortGroups%",
+        "category": "%extension.displayName%",
         "icon": "$(sort-precedence)"
       },
       {
         "command": "delphiDcc.refreshProjects",
         "title": "%command.refreshProjects%",
+        "category": "%extension.displayName%",
         "icon": "$(refresh)"
       },
       {
+        "command": "delphiDcc.openSettings",
+        "title": "%command.openSettings%",
+        "category": "%extension.displayName%",
+        "icon": "$(settings-gear)"
+      },
+      {
         "command": "delphiDcc.renameGroup",
-        "title": "%command.renameGroup%"
+        "title": "%command.renameGroup%",
+        "category": "%extension.displayName%"
       },
       {
         "command": "delphiDcc.moveGroupUp",
         "title": "%command.moveGroupUp%",
+        "category": "%extension.displayName%",
         "icon": "$(arrow-up)"
       },
       {
         "command": "delphiDcc.moveGroupDown",
         "title": "%command.moveGroupDown%",
+        "category": "%extension.displayName%",
         "icon": "$(arrow-down)"
       },
       {
         "command": "delphiDcc.addProjects",
         "title": "%command.addProjects%",
+        "category": "%extension.displayName%",
         "icon": "$(file-add)"
       },
       {
         "command": "delphiDcc.activateConfiguration",
-        "title": "%command.activateConfiguration%"
+        "title": "%command.activateConfiguration%",
+        "category": "%extension.displayName%"
       },
       {
         "command": "delphiDcc.showOutputPaths",
-        "title": "%command.showOutputPaths%"
+        "title": "%command.showOutputPaths%",
+        "category": "%extension.displayName%"
       },
       {
         "command": "delphiXe7.buildProject",
         "title": "%command.buildWin32%",
+        "category": "%extension.displayName%",
         "icon": "$(tools)"
       },
       {
         "command": "delphiXe7.buildProjectWin64",
         "title": "%command.buildWin64%",
+        "category": "%extension.displayName%",
         "icon": "$(tools)"
       },
       {
         "command": "delphiXe7.rebuildProject",
         "title": "%command.rebuildWin32%",
+        "category": "%extension.displayName%",
         "icon": "$(sync)"
       },
       {
         "command": "delphiXe7.cancelBuild",
         "title": "%command.cancelBuild%",
+        "category": "%extension.displayName%",
         "icon": "$(debug-stop)"
       },
       {
         "command": "delphiXe7.showBuildPlan",
         "title": "%command.showBuildPlan%",
+        "category": "%extension.displayName%",
         "icon": "$(list-tree)"
       },
       {
         "command": "delphiXe7.changeOutputPath",
         "title": "%command.changeOutputPath%",
+        "category": "%extension.displayName%",
         "icon": "$(folder-opened)"
       }
     ],
@@ -130,6 +152,11 @@
           "command": "delphiDcc.refreshProjects",
           "when": "view == delphiDccProjects",
           "group": "navigation@3"
+        },
+        {
+          "command": "delphiDcc.openSettings",
+          "when": "view == delphiDccProjects",
+          "group": "navigation@4"
         }
       ],
       "view/item/context": [

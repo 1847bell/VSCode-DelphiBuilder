@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { BuildCommands, CancellationError } from "./commands/buildCommands";
 import { localize, resolveLanguage, setLanguage } from "./localization/localizer";
 import { DelphiProjectTreeProvider } from "./vscode/projectTreeProvider";
+import { DelphiSettingsPanel } from "./vscode/settingsPanel";
 
 let commands: BuildCommands | undefined;
 let projectTree: DelphiProjectTreeProvider | undefined;
@@ -11,6 +12,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel("Delphi DCC Builder");
   commands = new BuildCommands(output, context.globalState, context.workspaceState);
   projectTree = new DelphiProjectTreeProvider(context.workspaceState);
+  const settingsPanel = new DelphiSettingsPanel();
   const treeView = vscode.window.createTreeView("delphiDccProjects", {
     treeDataProvider: projectTree,
     showCollapseAll: true
@@ -20,14 +22,17 @@ export function activate(context: vscode.ExtensionContext): void {
     output,
     commands,
     projectTree,
+    settingsPanel,
     treeView,
     vscode.workspace.onDidChangeConfiguration((event) => {
-      if (!event.affectsConfiguration("delphiDcc.language")) {
-        return;
+      if (event.affectsConfiguration("delphiDcc.language")) {
+        updateLanguage();
+        commands!.refreshLocalizedUi();
+        projectTree!.refresh();
       }
-      updateLanguage();
-      commands!.refreshLocalizedUi();
-      projectTree!.refresh();
+      if (event.affectsConfiguration("delphiDcc") || event.affectsConfiguration("delphiXe7")) {
+        settingsPanel.refresh();
+      }
     }),
     vscode.commands.registerCommand("delphiDcc.createGroup", () => runSafely(output, () => projectTree!.createGroup())),
     vscode.commands.registerCommand("delphiDcc.renameGroup", (argument) => runSafely(output, () => projectTree!.renameGroup(argument))),
@@ -36,6 +41,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("delphiDcc.sortGroups", () => runSafely(output, () => projectTree!.sortGroups())),
     vscode.commands.registerCommand("delphiDcc.addProjects", (argument) => runSafely(output, () => projectTree!.addProjects(argument))),
     vscode.commands.registerCommand("delphiDcc.refreshProjects", () => projectTree!.refresh()),
+    vscode.commands.registerCommand("delphiDcc.openSettings", () => settingsPanel.show()),
     vscode.commands.registerCommand("delphiDcc.activateConfiguration", (argument) => runSafely(output, () => projectTree!.activateConfiguration(argument))),
     vscode.commands.registerCommand("delphiDcc.showOutputPaths", (argument) => runSafely(output, () => projectTree!.showOutputPaths(argument))),
     vscode.commands.registerCommand("delphiXe7.buildProject", (argument) => runSafely(output, () => commands!.build(argument, false))),

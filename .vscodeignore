@@ -5,6 +5,7 @@ src/**
 test/**
 coverage/**
 *.md
+**/*.bak
 !README.md
 !README_CN.md
 !docs/DELPHI_VERSION_CONFIGURATION.md

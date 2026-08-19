@@ -13,6 +13,7 @@ interface ExtensionManifest {
     commands: Array<{
       command: string;
       title: string;
+      category: string;
     }>;
     configuration: {
       title: string;
@@ -27,6 +28,10 @@ interface ExtensionManifest {
     };
     menus: {
       "explorer/context": Array<{
+        command: string;
+        when?: string;
+      }>;
+      "view/title": Array<{
         command: string;
         when?: string;
       }>;
@@ -65,6 +70,7 @@ describe("extension manifest", () => {
       "delphiDcc.createGroup",
       "delphiDcc.sortGroups",
       "delphiDcc.refreshProjects",
+      "delphiDcc.openSettings",
       "delphiDcc.renameGroup",
       "delphiDcc.moveGroupUp",
       "delphiDcc.moveGroupDown",
@@ -79,22 +85,25 @@ describe("extension manifest", () => {
       "delphiXe7.changeOutputPath"
     ]);
     expect(manifest.contributes.commands.map((item) => resolveEnglish(item.title))).toEqual([
-      "Delphi DCC Builder: New Group",
-      "Delphi DCC Builder: Sort Groups",
-      "Delphi DCC Builder: Refresh Projects",
-      "Delphi DCC Builder: Rename Group",
-      "Delphi DCC Builder: Move Group Up",
-      "Delphi DCC Builder: Move Group Down",
-      "Delphi DCC Builder: Add Dproj Projects",
-      "Delphi DCC Builder: Activate Configuration",
-      "Delphi DCC Builder: Show Current Output Paths",
-      "Delphi DCC Builder: Build for Win32",
-      "Delphi DCC Builder: Build for Win64",
-      "Delphi DCC Builder: Rebuild for Win32",
-      "Delphi DCC Builder: Cancel Build",
-      "Delphi DCC Builder: Show Build Plan",
-      "Delphi DCC Builder: Change Output Path"
+      "New Group",
+      "Sort Groups",
+      "Refresh Projects",
+      "Open Settings",
+      "Rename Group",
+      "Move Group Up",
+      "Move Group Down",
+      "Add Dproj Projects",
+      "Activate Configuration",
+      "Show Current Output Paths",
+      "Build for Win32",
+      "Build for Win64",
+      "Rebuild for Win32",
+      "Cancel Build",
+      "Show Build Plan",
+      "Change Output Path"
     ]);
+    expect(manifest.contributes.commands.map((item) => resolveEnglish(item.category)))
+      .toEqual(Array(manifest.contributes.commands.length).fill("Delphi DCC Builder"));
   });
 
   it("requires DCC32 while keeping DCC64 optional", () => {
@@ -144,6 +153,15 @@ describe("extension manifest", () => {
       name: "%view.projects%"
       })])
     );
+    expect(englishNls["viewContainer.delphiProjects"]).toBe("Delphi");
+    expect(chineseNls["viewContainer.delphiProjects"]).toBe("Delphi");
+    expect(englishNls["view.projects"]).toBe("Projects");
+    expect(chineseNls["view.projects"]).toBe("项目");
+    expect(manifest.contributes.menus["view/title"]).toContainEqual({
+      command: "delphiDcc.openSettings",
+      when: "view == delphiDccProjects",
+      group: "navigation@4"
+    });
   });
 
   it("offers English and Simplified Chinese as the runtime language setting", () => {
@@ -155,8 +173,8 @@ describe("extension manifest", () => {
       scope: "window"
     });
     expect(language.enumItemLabels).toEqual(["%language.english%", "%language.chinese%"]);
-    expect(chineseNls["configuration.language.description"]).toContain("运行时界面");
-    expect(chineseNls["command.buildWin32"]).toContain("编译 Win32");
+    expect(chineseNls["configuration.language.description"]).toContain("扩展设置页");
+    expect(chineseNls["command.buildWin32"]).toBe("编译 Win32");
   });
 
   it("limits per-project output path history through settings", () => {
