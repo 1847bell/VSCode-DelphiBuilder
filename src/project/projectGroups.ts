@@ -128,6 +128,61 @@ export function addProjectToGroup(
   ));
 }
 
+export function removeProjectFromGroup(
+  groups: readonly ProjectGroup[],
+  groupId: string,
+  filePath: string
+): ProjectGroup[] {
+  const group = requireGroup(groups, groupId);
+  const key = projectKey(filePath);
+  if (!group.projects.some((project) => projectKey(project.filePath) === key)) {
+    throw new Error(localize("group.error.projectMissing"));
+  }
+  return groups.map((item) => (
+    item === group
+      ? {
+        ...item,
+        projects: item.projects.filter((project) => projectKey(project.filePath) !== key)
+      }
+      : item
+  ));
+}
+
+export function moveProjectToGroup(
+  groups: readonly ProjectGroup[],
+  sourceGroupId: string,
+  targetGroupId: string,
+  filePath: string
+): ProjectGroup[] {
+  const source = requireGroup(groups, sourceGroupId);
+  const target = requireGroup(groups, targetGroupId);
+  const key = projectKey(filePath);
+  const project = source.projects.find((item) => projectKey(item.filePath) === key);
+  if (!project) {
+    throw new Error(localize("group.error.projectMissing"));
+  }
+  if (source === target) {
+    return [...groups];
+  }
+  if (target.projects.some((item) => projectKey(item.filePath) === key)) {
+    throw new Error(localize("group.error.projectDuplicate", {
+      project: path.basename(project.filePath)
+    }));
+  }
+  return groups.map((group) => {
+    if (group === source) {
+      return {
+        ...group,
+        projects: group.projects.filter((item) => projectKey(item.filePath) !== key)
+      };
+    }
+    if (group === target) {
+      return { ...group, projects: [...group.projects, project] };
+    }
+    return group;
+  });
+}
+
 export function setActiveProjectConfiguration(
   groups: readonly ProjectGroup[],
   groupId: string,

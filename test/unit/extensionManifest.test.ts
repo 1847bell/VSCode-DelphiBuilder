@@ -35,6 +35,11 @@ interface ExtensionManifest {
         command: string;
         when?: string;
       }>;
+      "view/item/context": Array<{
+        command: string;
+        when?: string;
+        group?: string;
+      }>;
     };
     viewsContainers?: { activitybar?: Array<{ id: string; title: string; icon: string }> };
     views?: Record<string, Array<{ id: string; name: string }>>;
@@ -76,6 +81,8 @@ describe("extension manifest", () => {
       "delphiDcc.moveGroupDown",
       "delphiDcc.addProjects",
       "delphiDcc.addProjectFromExplorer",
+      "delphiDcc.moveProject",
+      "delphiDcc.removeProject",
       "delphiDcc.activateConfiguration",
       "delphiDcc.showOutputPaths",
       "delphiXe7.buildProject",
@@ -95,6 +102,8 @@ describe("extension manifest", () => {
       "Move Group Down",
       "Add Dproj Projects",
       "Add to Delphi Project Group",
+      "Move to Group",
+      "Remove from Group",
       "Activate Configuration",
       "Show Current Output Paths",
       "Build for Win32",
@@ -143,6 +152,21 @@ describe("extension manifest", () => {
     expect(menu[4].when).toContain("config.delphiXe7.showBuildPlanMenu == show");
     expect(manifest.contributes.configuration.properties["delphiXe7.showBuildPlanMenu"])
       .toMatchObject({ default: "hide", enum: ["hide", "show"] });
+  });
+
+  it("offers move and remove actions for grouped projects", () => {
+    const menu = manifest.contributes.menus["view/item/context"];
+    const projectItems = menu.filter((item) => item.when?.includes("delphiGroupedProject"));
+    expect(projectItems.map((item) => item.command)).toEqual([
+      "delphiDcc.showOutputPaths",
+      "delphiDcc.moveProject",
+      "delphiDcc.removeProject"
+    ]);
+    expect(projectItems.map((item) => item.group)).toEqual([
+      "navigation@1",
+      "navigation@2",
+      "navigation@3"
+    ]);
   });
 
   it("registers a Delphi Projects activity bar view", () => {

@@ -4,7 +4,9 @@ import {
   addProjectGroup,
   addProjectToGroup,
   moveProjectGroup,
+  moveProjectToGroup,
   normalizeProjectGroups,
+  removeProjectFromGroup,
   renameProjectGroup,
   setActiveProjectConfiguration,
   sortProjectGroups
@@ -71,5 +73,33 @@ describe("project groups", () => {
     expect(groups[0].projects).toEqual([{ filePath: project, activeConfiguration: "Release" }]);
     expect(() => addProjectToGroup(groups, "two", project.toLocaleUpperCase())).toThrow(/already/i);
     expect(() => addProjectToGroup(groups, "one", "Sample.dpr")).toThrow(/\.dproj/i);
+  });
+
+  it("moves projects between groups without losing their active configuration", () => {
+    const project = path.resolve("Sample.dproj");
+    let groups = addProjectGroup([], "one", "Applications");
+    groups = addProjectGroup(groups, "two", "Libraries");
+    groups = addProjectToGroup(groups, "one", project);
+    groups = setActiveProjectConfiguration(groups, "one", project, "Release");
+    groups = moveProjectToGroup(groups, "one", "two", project);
+
+    expect(groups[0].projects).toEqual([]);
+    expect(groups[1].projects).toEqual([{ filePath: project, activeConfiguration: "Release" }]);
+    expect(() => moveProjectToGroup(groups, "one", "two", project)).toThrow(/no longer exists/i);
+    expect(() => moveProjectToGroup(groups, "two", "missing", project)).toThrow(/no longer exists/i);
+  });
+
+  it("removes projects from a group without affecting other groups", () => {
+    const first = path.resolve("First.dproj");
+    const second = path.resolve("Second.dproj");
+    let groups = addProjectGroup([], "one", "Applications");
+    groups = addProjectGroup(groups, "two", "Libraries");
+    groups = addProjectToGroup(groups, "one", first);
+    groups = addProjectToGroup(groups, "two", second);
+    groups = removeProjectFromGroup(groups, "one", first);
+
+    expect(groups[0].projects).toEqual([]);
+    expect(groups[1].projects).toEqual([{ filePath: second }]);
+    expect(() => removeProjectFromGroup(groups, "one", first)).toThrow(/no longer exists/i);
   });
 });

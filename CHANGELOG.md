@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.2.13
+
+- Add grouped-project context actions to move a project to another group or remove it from the extension without deleting the project file.
+
 ## 0.2.9
 
 - Detect `{$R *.res}` in the project main source and create a minimal valid project `.res` when it is missing.

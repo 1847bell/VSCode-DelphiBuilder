@@ -11,9 +11,11 @@ import {
   GroupedProject,
   GroupMoveDirection,
   moveProjectGroup,
+  moveProjectToGroup,
   normalizeProjectGroups,
   PROJECT_GROUPS_STATE_KEY,
   ProjectGroup,
+  removeProjectFromGroup,
   renameProjectGroup,
   setActiveProjectConfiguration,
   sortProjectGroups
@@ -195,6 +197,70 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
       return;
     }
     await this.save(addProjectToGroup(this.groups, group.id, argument.fsPath));
+  }
+
+  public async moveProject(argument: unknown): Promise<void> {
+    const reference = readProjectReference(argument);
+    if (!reference) {
+      throw new Error(localize("tree.error.projectUnavailable"));
+    }
+    const project = this.findProject(reference);
+    if (!project) {
+      throw new Error(localize("tree.error.projectNotInView"));
+    }
+    const targets = this.groups.filter((group) => group.id !== reference.groupId);
+    if (targets.length === 0) {
+      void vscode.window.showInformationMessage(localize("tree.moveProject.noTargets"));
+      return;
+    }
+    const selected = await vscode.window.showQuickPick(
+      targets.map((group) => ({
+        label: group.name,
+        description: localize(
+          group.projects.length === 1 ? "tree.projectCount.one" : "tree.projectCount.other",
+          { count: group.projects.length }
+        ),
+        groupId: group.id
+      })),
+      {
+        title: localize("tree.moveProject.title", { project: path.basename(project.filePath) }),
+        placeHolder: localize("tree.moveProject.placeholder")
+      }
+    );
+    if (!selected) {
+      return;
+    }
+    await this.save(moveProjectToGroup(
+      this.groups,
+      reference.groupId,
+      selected.groupId,
+      project.filePath
+    ));
+  }
+
+  public async removeProject(argument: unknown): Promise<void> {
+    const reference = readProjectReference(argument);
+    if (!reference) {
+      throw new Error(localize("tree.error.projectUnavailable"));
+    }
+    const group = this.groups.find((item) => item.id === reference.groupId);
+    const project = this.findProject(reference);
+    if (!group || !project) {
+      throw new Error(localize("tree.error.projectNotInView"));
+    }
+    const action = localize("tree.removeProject.action");
+    const selected = await vscode.window.showWarningMessage(
+      localize("tree.removeProject.confirm", {
+        project: path.basename(project.filePath),
+        group: group.name
+      }),
+      { modal: true, detail: localize("tree.removeProject.detail") },
+      action
+    );
+    if (selected !== action) {
+      return;
+    }
+    await this.save(removeProjectFromGroup(this.groups, group.id, project.filePath));
   }
 
   public async activateConfiguration(argument: unknown): Promise<void> {
