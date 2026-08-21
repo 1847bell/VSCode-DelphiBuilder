@@ -2,7 +2,7 @@
   "extension.displayName": "Delphi DCC Builder",
   "extension.description": "在 Visual Studio Code 中使用 DCC32 和 DCC64 编译 Delphi Win32 与 Win64 项目。",
   "command.newGroup": "新建分组",
-  "command.sortGroups": "排序分组",
+  "command.sortGroups": "自动分组排序",
   "command.refreshProjects": "刷新项目",
   "command.openSettings": "打开设置",
   "command.renameGroup": "重命名分组",

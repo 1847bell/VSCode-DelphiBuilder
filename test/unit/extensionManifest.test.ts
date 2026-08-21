@@ -96,7 +96,7 @@ describe("extension manifest", () => {
     ]);
     expect(manifest.contributes.commands.map((item) => resolveEnglish(item.title))).toEqual([
       "New Group",
-      "Sort Groups",
+      "Auto Sort Groups",
       "Refresh Projects",
       "Open Settings",
       "Rename Group",
@@ -196,8 +196,16 @@ describe("extension manifest", () => {
     expect(manifest.contributes.menus["view/title"]).toContainEqual({
       command: "delphiDcc.openSettings",
       when: "view == delphiDccProjects",
-      group: "navigation@4"
+      group: "navigation@6"
     });
+    expect(manifest.contributes.menus["view/title"].map((item) => item.command)).toEqual([
+      "delphiDcc.createGroup",
+      "delphiDcc.sortGroups",
+      "delphiDcc.moveGroupUp",
+      "delphiDcc.moveGroupDown",
+      "delphiDcc.refreshProjects",
+      "delphiDcc.openSettings"
+    ]);
   });
 
   it("offers English and Simplified Chinese as the runtime language setting", () => {
@@ -211,6 +219,9 @@ describe("extension manifest", () => {
     expect(language.enumItemLabels).toEqual(["%language.english%", "%language.chinese%"]);
     expect(chineseNls["configuration.language.description"]).toContain("扩展设置页");
     expect(chineseNls["command.buildWin32"]).toBe("编译 Win32");
+    expect(chineseNls["command.sortGroups"]).toBe("自动分组排序");
+    expect(chineseNls["command.moveGroupUp"]).toBe("分组上移");
+    expect(chineseNls["command.moveGroupDown"]).toBe("分组下移");
   });
 
   it("limits per-project output path history through settings", () => {

@@ -2,7 +2,7 @@
   "extension.displayName": "Delphi DCC Builder",
   "extension.description": "Build Delphi Win32 and Win64 projects with DCC32 and DCC64 from Visual Studio Code.",
   "command.newGroup": "New Group",
-  "command.sortGroups": "Sort Groups",
+  "command.sortGroups": "Auto Sort Groups",
   "command.refreshProjects": "Refresh Projects",
   "command.openSettings": "Open Settings",
   "command.renameGroup": "Rename Group",

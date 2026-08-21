@@ -180,14 +180,24 @@
           "group": "navigation@2"
         },
         {
-          "command": "delphiDcc.refreshProjects",
+          "command": "delphiDcc.moveGroupUp",
           "when": "view == delphiDccProjects",
           "group": "navigation@3"
         },
         {
-          "command": "delphiDcc.openSettings",
+          "command": "delphiDcc.moveGroupDown",
           "when": "view == delphiDccProjects",
           "group": "navigation@4"
+        },
+        {
+          "command": "delphiDcc.refreshProjects",
+          "when": "view == delphiDccProjects",
+          "group": "navigation@5"
+        },
+        {
+          "command": "delphiDcc.openSettings",
+          "when": "view == delphiDccProjects",
+          "group": "navigation@6"
         }
       ],
       "view/item/context": [
