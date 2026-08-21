@@ -11,6 +11,8 @@
   "command.addProjects": "Add Dproj Projects",
   "command.addProjectFromExplorer": "Add to Delphi Project Group",
   "command.moveProject": "Move to Group",
+  "command.moveProjectUp": "Move Project Up",
+  "command.moveProjectDown": "Move Project Down",
   "command.removeProject": "Remove from Group",
   "command.activateConfiguration": "Activate Configuration",
   "command.showOutputPaths": "Show Current Output Paths",

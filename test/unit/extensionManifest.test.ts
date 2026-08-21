@@ -82,6 +82,8 @@ describe("extension manifest", () => {
       "delphiDcc.addProjects",
       "delphiDcc.addProjectFromExplorer",
       "delphiDcc.moveProject",
+      "delphiDcc.moveProjectUp",
+      "delphiDcc.moveProjectDown",
       "delphiDcc.removeProject",
       "delphiDcc.activateConfiguration",
       "delphiDcc.showOutputPaths",
@@ -103,6 +105,8 @@ describe("extension manifest", () => {
       "Add Dproj Projects",
       "Add to Delphi Project Group",
       "Move to Group",
+      "Move Project Up",
+      "Move Project Down",
       "Remove from Group",
       "Activate Configuration",
       "Show Current Output Paths",
@@ -160,12 +164,16 @@ describe("extension manifest", () => {
     expect(projectItems.map((item) => item.command)).toEqual([
       "delphiDcc.showOutputPaths",
       "delphiDcc.moveProject",
+      "delphiDcc.moveProjectUp",
+      "delphiDcc.moveProjectDown",
       "delphiDcc.removeProject"
     ]);
     expect(projectItems.map((item) => item.group)).toEqual([
       "navigation@1",
       "navigation@2",
-      "navigation@3"
+      "navigation@3",
+      "navigation@4",
+      "navigation@5"
     ]);
   });
 

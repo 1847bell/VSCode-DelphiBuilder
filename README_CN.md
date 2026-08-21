@@ -2,14 +2,14 @@
 
 在 Visual Studio Code 中直接调用 Delphi 命令行编译器编译项目。扩展会读取 `.dproj` 配置，生成可查看的 Build Plan，运行 `DCC32.exe` 或 `DCC64.exe`，并将编译诊断发布到 Problems 面板。
 
-链接：[代码仓库](https://github.com/1847bell/VSCode-DelphiBuilder) · [问题与功能请求](https://github.com/1847bell/VSCode-DelphiBuilder/issues) · [English README](README.md)
+链接：[代码仓库](https://github.com/1847bell/VSCode-DelphiBuilder) · [问题与功能请求](https://github.com/1847bell/VSCode-DelphiBuilder/issues) · [Delphi 版本配置说明](docs/DELPHI_VERSION_CONFIGURATION.md) · [English README](README.md)
 
 ## 主要功能
 
 - 使用 `DCC32.exe` 编译 Win32；配置 `DCC64.exe` 后可编译 Win64。
 - 读取 `.dproj` 声明的配置，并编译选定的配置和平台。
 - 在 Activity Bar 中维护 Delphi 项目分组。
-- 从资源管理器右键菜单添加 `.dproj`，支持在分组之间移动项目，或从分组中移除项目而不删除项目文件。
+- 从资源管理器右键菜单添加 `.dproj`，支持在分组内调整项目顺序、在分组之间移动项目，或从分组中移除项目而不删除项目文件。
 - 支持分组排序、上移、下移、重命名和刷新。
 - 为分组项目选择当前配置，并直接从项目树启动 Win32 或 Win64 编译。
 - 提供编译、重新编译、取消编译、查看编译计划和修改输出路径命令。
@@ -29,7 +29,7 @@
 
 当前唯一实现并在真实机器上测试过的编译器是 **Delphi XE7 / BDS 15.0**，运行环境为 Windows。测试覆盖 XE7 Win32、XE7 Win64、资源预处理、诊断和项目侧边栏。其他 Delphi 版本即使命令行参数相似，也不代表已经兼容。
 
-如果需要其他 Delphi 版本，请增加对应的版本配置文件和测试，并通过 [GitHub Issues](https://github.com/1847bell/VSCode-DelphiBuilder/issues) 或 Pull Request 提交。请附上编译器版本、BDS 目录结构、注册表值、Build Plan 和真实编译测试结果。
+如果需要其他 Delphi 版本并且可以自行实现支持，请先 git clone 本项目，创建以编译器版本命名的分支（例如 `version-xe8`），补充配置和测试，测试通过后发起 Pull Request。如果需要协助，请将 JSON 配置、测试和生成的 Build Plan 附加到 [Issue](https://github.com/1847bell/VSCode-DelphiBuilder/issues)。如有条件，也请附上编译器版本、BDS 目录结构、注册表值和真实编译测试结果。
 
 ## 安装与第一次编译
 
@@ -83,7 +83,7 @@
 8. 增加真实编译器集成测试，覆盖 Win32、可用时的 Win64、Debug、Release、Rebuild、资源和诊断。
 9. 执行 `npm run check`、`npm test`、对应的真实集成测试、`npm run compile` 和 `npm run package`。
 
-完整字段说明和贡献者检查表见 [DELPHI_VERSION_CONFIGURATION.md](docs/DELPHI_VERSION_CONFIGURATION.md)。需要协助支持新编译器时，请将 JSON 配置、测试和生成的 Build Plan 附加到 [Issue](https://github.com/1847bell/VSCode-DelphiBuilder/issues)。
+完整字段说明和贡献者检查表请参见顶部链接中的版本配置说明。
 
 ## 如何添加多语言支持
 

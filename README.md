@@ -2,14 +2,14 @@
 
 Build Delphi projects directly from Visual Studio Code with the Delphi command-line compilers. The extension evaluates `.dproj` configuration values, prepares a visible Build Plan, runs `DCC32.exe` or `DCC64.exe`, and publishes compiler diagnostics to the Problems panel.
 
-Links: [Repository](https://github.com/1847bell/VSCode-DelphiBuilder) · [Issues and feature requests](https://github.com/1847bell/VSCode-DelphiBuilder/issues) · [中文说明](README_CN.md)
+Links: [Repository](https://github.com/1847bell/VSCode-DelphiBuilder) · [Issues and feature requests](https://github.com/1847bell/VSCode-DelphiBuilder/issues) · [Delphi version configuration guide](docs/DELPHI_VERSION_CONFIGURATION.md) · [中文说明](README_CN.md)
 
 ## Features
 
 - Build Win32 projects with `DCC32.exe` and optionally build Win64 projects with `DCC64.exe`.
 - Read the configurations declared by a `.dproj` and build the selected configuration and platform.
 - Maintain Delphi project groups in a dedicated Activity Bar view.
-- Add `.dproj` files from the Explorer context menu, move projects between groups, or remove them from a group without deleting project files.
+- Add `.dproj` files from the Explorer context menu, reorder projects within a group, move projects between groups, or remove them from a group without deleting project files.
 - Reorder or sort groups, rename groups, and refresh the project view.
 - Select the active configuration for each grouped project and start Win32 or Win64 builds from the project tree.
 - Build, Rebuild, Cancel Build, Show Build Plan, and Change Output Path commands.
@@ -29,7 +29,7 @@ Links: [Repository](https://github.com/1847bell/VSCode-DelphiBuilder) · [Issues
 
 The only compiler version currently implemented and tested on real hardware is **Delphi XE7 / BDS 15.0** on Windows. The test suite covers XE7 Win32, XE7 Win64, resource preprocessing, diagnostics, and the project sidebar. Other Delphi versions are not claimed to be compatible just because their DCC command line looks similar.
 
-If you need another Delphi version, please add the corresponding version configuration and tests, then submit the files through [GitHub Issues](https://github.com/1847bell/VSCode-DelphiBuilder/issues) or a pull request. Include the compiler version, BDS directory layout, registry values, Build Plan, and real compiler test results.
+If you need another Delphi version and can implement the support, clone the repository, create a branch named for that compiler version (for example, `version-xe8`), add the configuration and tests, and open a pull request after the tests pass. If you need assistance, attach the JSON configuration, tests, and generated Build Plan to an [Issue](https://github.com/1847bell/VSCode-DelphiBuilder/issues). Include the compiler version, BDS directory layout, registry values, and real compiler test results when available.
 
 ## Installation and first build
 
@@ -83,7 +83,7 @@ Version support is data-driven, but the VS Code manifest is static. Adding a JSO
 8. Add a real compiler integration test for Win32, Win64 when available, Debug, Release, Rebuild, resources, and diagnostics.
 9. Run `npm run check`, `npm test`, `npm run test:xe7` (or the matching integration command), `npm run compile`, and `npm run package`.
 
-The complete schema and contributor checklist are in [DELPHI_VERSION_CONFIGURATION.md](docs/DELPHI_VERSION_CONFIGURATION.md). When requesting help for a new compiler, attach the JSON configuration, tests, and the generated Build Plan to an [Issue](https://github.com/1847bell/VSCode-DelphiBuilder/issues).
+The complete schema and contributor checklist are available from the version configuration guide in the links above.
 
 ## Add another language
 

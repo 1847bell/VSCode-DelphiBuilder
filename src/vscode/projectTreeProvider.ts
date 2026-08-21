@@ -11,10 +11,12 @@ import {
   GroupedProject,
   GroupMoveDirection,
   moveProjectGroup,
+  moveProjectWithinGroup,
   moveProjectToGroup,
   normalizeProjectGroups,
   PROJECT_GROUPS_STATE_KEY,
   ProjectGroup,
+  ProjectMoveDirection,
   removeProjectFromGroup,
   renameProjectGroup,
   setActiveProjectConfiguration,
@@ -238,6 +240,26 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
     ));
   }
 
+  public async moveProjectWithinGroup(
+    argument: unknown,
+    direction: ProjectMoveDirection
+  ): Promise<void> {
+    const reference = readProjectReference(argument);
+    if (!reference) {
+      throw new Error(localize("tree.error.projectUnavailable"));
+    }
+    const project = this.findProject(reference);
+    if (!project) {
+      throw new Error(localize("tree.error.projectNotInView"));
+    }
+    await this.save(moveProjectWithinGroup(
+      this.groups,
+      reference.groupId,
+      project.filePath,
+      direction
+    ));
+  }
+
   public async removeProject(argument: unknown): Promise<void> {
     const reference = readProjectReference(argument);
     if (!reference) {
@@ -376,7 +398,7 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
 
   private getProjectTreeItem(node: ProjectNode): vscode.TreeItem {
     const item = new vscode.TreeItem(
-      path.basename(node.project.filePath),
+      path.basename(node.project.filePath, path.extname(node.project.filePath)),
       vscode.TreeItemCollapsibleState.Collapsed
     );
     item.id = `delphi-project:${node.groupId}:${projectKey(node.project.filePath)}`;

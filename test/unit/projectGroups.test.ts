@@ -4,6 +4,7 @@ import {
   addProjectGroup,
   addProjectToGroup,
   moveProjectGroup,
+  moveProjectWithinGroup,
   moveProjectToGroup,
   normalizeProjectGroups,
   removeProjectFromGroup,
@@ -87,6 +88,23 @@ describe("project groups", () => {
     expect(groups[1].projects).toEqual([{ filePath: project, activeConfiguration: "Release" }]);
     expect(() => moveProjectToGroup(groups, "one", "two", project)).toThrow(/no longer exists/i);
     expect(() => moveProjectToGroup(groups, "two", "missing", project)).toThrow(/no longer exists/i);
+  });
+
+  it("reorders projects within a group without losing their active configuration", () => {
+    const first = path.resolve("First.dproj");
+    const second = path.resolve("Second.dproj");
+    let groups = addProjectGroup([], "one", "Applications");
+    groups = addProjectToGroup(groups, "one", first);
+    groups = addProjectToGroup(groups, "one", second);
+    groups = setActiveProjectConfiguration(groups, "one", second, "Release");
+    groups = moveProjectWithinGroup(groups, "one", second, "up");
+
+    expect(groups[0].projects).toEqual([
+      { filePath: second, activeConfiguration: "Release" },
+      { filePath: first }
+    ]);
+    expect(moveProjectWithinGroup(groups, "one", second, "up")).toEqual(groups);
+    expect(moveProjectWithinGroup(groups, "one", first, "down")).toEqual(groups);
   });
 
   it("removes projects from a group without affecting other groups", () => {

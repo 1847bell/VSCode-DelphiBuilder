@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.2.14
+
+- Hide the `.dproj` suffix in the project tree and add commands to move projects up or down within a group.
+- Document compiler-version contribution branches and Issue attachments in both README languages.
+
 ## 0.2.13
 
 - Add grouped-project context actions to move a project to another group or remove it from the extension without deleting the project file.

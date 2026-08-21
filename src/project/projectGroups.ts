@@ -15,6 +15,7 @@ export interface ProjectGroup {
 }
 
 export type GroupMoveDirection = "up" | "down";
+export type ProjectMoveDirection = "up" | "down";
 
 export function normalizeProjectGroups(value: unknown): ProjectGroup[] {
   if (!Array.isArray(value)) {
@@ -181,6 +182,27 @@ export function moveProjectToGroup(
     }
     return group;
   });
+}
+
+export function moveProjectWithinGroup(
+  groups: readonly ProjectGroup[],
+  groupId: string,
+  filePath: string,
+  direction: ProjectMoveDirection
+): ProjectGroup[] {
+  const group = requireGroup(groups, groupId);
+  const key = projectKey(filePath);
+  const index = group.projects.findIndex((project) => projectKey(project.filePath) === key);
+  if (index < 0) {
+    throw new Error(localize("group.error.projectMissing"));
+  }
+  const target = direction === "up" ? index - 1 : index + 1;
+  if (target < 0 || target >= group.projects.length) {
+    return [...groups];
+  }
+  const projects = [...group.projects];
+  [projects[index], projects[target]] = [projects[target], projects[index]];
+  return groups.map((item) => item === group ? { ...item, projects } : item);
 }
 
 export function setActiveProjectConfiguration(

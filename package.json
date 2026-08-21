@@ -2,7 +2,7 @@
   "name": "delphi-dcc-builder",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.2.13",
+  "version": "0.2.14",
   "icon": "images/icon.png",
   "publisher": "1847bell",
   "author": "Alex Niu",
@@ -33,6 +33,8 @@
     "onCommand:delphiDcc.createGroup",
     "onCommand:delphiDcc.addProjects",
     "onCommand:delphiDcc.addProjectFromExplorer",
+    "onCommand:delphiDcc.moveProjectUp",
+    "onCommand:delphiDcc.moveProjectDown",
     "onCommand:delphiDcc.activateConfiguration",
     "onCommand:delphiXe7.buildProject",
     "onCommand:delphiXe7.buildProjectWin64",
@@ -100,6 +102,18 @@
         "command": "delphiDcc.moveProject",
         "title": "%command.moveProject%",
         "category": "%extension.displayName%"
+      },
+      {
+        "command": "delphiDcc.moveProjectUp",
+        "title": "%command.moveProjectUp%",
+        "category": "%extension.displayName%",
+        "icon": "$(arrow-up)"
+      },
+      {
+        "command": "delphiDcc.moveProjectDown",
+        "title": "%command.moveProjectDown%",
+        "category": "%extension.displayName%",
+        "icon": "$(arrow-down)"
       },
       {
         "command": "delphiDcc.removeProject",
@@ -208,9 +222,19 @@
           "group": "navigation@2"
         },
         {
-          "command": "delphiDcc.removeProject",
+          "command": "delphiDcc.moveProjectUp",
           "when": "view == delphiDccProjects && viewItem == delphiGroupedProject",
           "group": "navigation@3"
+        },
+        {
+          "command": "delphiDcc.moveProjectDown",
+          "when": "view == delphiDccProjects && viewItem == delphiGroupedProject",
+          "group": "navigation@4"
+        },
+        {
+          "command": "delphiDcc.removeProject",
+          "when": "view == delphiDccProjects && viewItem == delphiGroupedProject",
+          "group": "navigation@5"
         }
       ],
       "explorer/context": [
