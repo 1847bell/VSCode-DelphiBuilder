@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { BuildCommands, CancellationError } from "./commands/buildCommands";
 import { localize, resolveLanguage, setLanguage } from "./localization/localizer";
+import { DelphiFolding } from "./vscode/delphiFolding";
 import { DelphiProjectTreeProvider } from "./vscode/projectTreeProvider";
 import { DelphiSettingsPanel } from "./vscode/settingsPanel";
 
@@ -13,6 +14,7 @@ export function activate(context: vscode.ExtensionContext): void {
   commands = new BuildCommands(output, context.globalState, context.workspaceState);
   projectTree = new DelphiProjectTreeProvider(context.workspaceState);
   const settingsPanel = new DelphiSettingsPanel();
+  const folding = new DelphiFolding();
   const treeView = vscode.window.createTreeView("delphiDccProjects", {
     treeDataProvider: projectTree,
     showCollapseAll: true
@@ -23,6 +25,7 @@ export function activate(context: vscode.ExtensionContext): void {
     commands,
     projectTree,
     settingsPanel,
+    folding,
     treeView,
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("delphiDcc.language")) {

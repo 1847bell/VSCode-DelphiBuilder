@@ -32,6 +32,7 @@
   "configuration.language.description": "Language used by the Delphi DCC Builder interface and extension Settings page. The built-in VS Code Settings view follows the VS Code display language.",
   "configuration.version.description": "Delphi compiler version used to resolve version-specific build settings and BDS environment values.",
   "configuration.resourceBuild.description": "Prepare missing project resources and compile .dproj RcCompile resources before running DCC.",
+  "configuration.autoFoldRegions.description": "Automatically fold {$REGION} … {$ENDREGION} regions when a Delphi source file is opened. Use the Fold All Regions command to restore them.",
   "configuration.compilerPath.description": "Required absolute path to the Delphi XE7 DCC32.exe. Builds fail when this setting is empty.",
   "configuration.compiler64Path.description": "Optional absolute path to the Delphi XE7 DCC64.exe. The Win64 Explorer build command is shown when this setting is not empty.",
   "configuration.rsvarsPath.description": "Optional absolute path to rsvars.bat. Leave empty to discover it from the configured compiler or BDS installation.",

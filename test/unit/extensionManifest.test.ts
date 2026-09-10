@@ -9,6 +9,7 @@ interface ExtensionManifest {
   description: string;
   publisher: string;
   author: string;
+  activationEvents?: string[];
   contributes: {
     commands: Array<{
       command: string;
@@ -227,5 +228,13 @@ describe("extension manifest", () => {
   it("limits per-project output path history through settings", () => {
     expect(manifest.contributes.configuration.properties["delphiXe7.outputPathHistoryLimit"])
       .toMatchObject({ type: "integer", default: 5, minimum: 1, maximum: 15 });
+  });
+
+  it("auto-folds Delphi regions by default with a localized description", () => {
+    expect(manifest.contributes.configuration.properties["delphiDcc.folding.autoFoldRegions"])
+      .toMatchObject({ type: "boolean", default: true, scope: "window" });
+    expect(englishNls["configuration.autoFoldRegions.description"]).toContain("{$REGION}");
+    expect(chineseNls["configuration.autoFoldRegions.description"]).toContain("{$REGION}");
+    expect(manifest.activationEvents).toContain("onStartupFinished");
   });
 });

@@ -2,7 +2,7 @@
   "name": "delphi-dcc-builder",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.2.14",
+  "version": "0.2.15",
   "icon": "images/icon.png",
   "publisher": "1847bell",
   "author": "Alex Niu",
@@ -41,7 +41,8 @@
     "onCommand:delphiXe7.rebuildProject",
     "onCommand:delphiXe7.cancelBuild",
     "onCommand:delphiXe7.showBuildPlan",
-    "onCommand:delphiXe7.changeOutputPath"
+    "onCommand:delphiXe7.changeOutputPath",
+    "onStartupFinished"
   ],
   "contributes": {
     "commands": [
@@ -328,6 +329,12 @@
           "default": true,
           "scope": "resource",
           "description": "%configuration.resourceBuild.description%"
+        },
+        "delphiDcc.folding.autoFoldRegions": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "description": "%configuration.autoFoldRegions.description%"
         },
         "delphiXe7.compilerPath": {
           "type": "string",

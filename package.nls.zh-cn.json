@@ -32,6 +32,7 @@
   "configuration.language.description": "Delphi DCC Builder 界面和扩展设置页使用的语言。VS Code 原生设置页仍跟随 VS Code 显示语言。",
   "configuration.version.description": "用于解析版本专属编译设置和 BDS 环境值的 Delphi 编译器版本。",
   "configuration.resourceBuild.description": "在运行 DCC 前准备缺失的项目资源，并编译 .dproj 中的 RcCompile 资源。",
+  "configuration.autoFoldRegions.description": "打开 Delphi 源文件时自动折叠 {$REGION} … {$ENDREGION} 区域。可通过“全部折叠区域”命令展开恢复。",
   "configuration.compilerPath.description": "Delphi XE7 DCC32.exe 的必填绝对路径。为空时编译会失败。",
   "configuration.compiler64Path.description": "Delphi XE7 DCC64.exe 的可选绝对路径。设置后才会在资源管理器中显示 Win64 编译命令。",
   "configuration.rsvarsPath.description": "rsvars.bat 的可选绝对路径。留空时从已配置的编译器或 BDS 安装中查找。",

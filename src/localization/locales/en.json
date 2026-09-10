@@ -38,6 +38,8 @@
   "settings.version.description": "Delphi compiler version used for builds and BDS environment values.",
   "settings.resourceBuild.label": "Build Resources",
   "settings.resourceBuild.description": "Prepare and compile project resources before running DCC.",
+  "settings.autoFoldRegions.label": "Auto-fold Regions",
+  "settings.autoFoldRegions.description": "Automatically fold {$REGION} … {$ENDREGION} regions when a Delphi source file is opened.",
   "settings.compilerPath.label": "DCC32 Path",
   "settings.compilerPath.description": "Absolute path to the Delphi XE7 DCC32.exe.",
   "settings.compiler64Path.label": "DCC64 Path",

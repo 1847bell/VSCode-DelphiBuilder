@@ -54,6 +54,14 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
     defaultValue: true
   },
   {
+    key: "delphiDcc.folding.autoFoldRegions",
+    section: "general",
+    kind: "boolean",
+    label: "settings.autoFoldRegions.label",
+    description: "settings.autoFoldRegions.description",
+    defaultValue: true
+  },
+  {
     key: "delphiXe7.compilerPath",
     section: "compiler",
     kind: "text",

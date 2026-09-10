@@ -37,6 +37,16 @@ describe("extension settings page", () => {
     expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
   });
 
+  it("renders and validates the region auto-fold setting", () => {
+    expect(SETTING_DEFINITIONS.some((definition) => definition.key === "delphiDcc.folding.autoFoldRegions"))
+      .toBe(true);
+    const html = renderSettingsPage("en", {}, "test-nonce");
+    expect(html).toContain('data-setting="delphiDcc.folding.autoFoldRegions"');
+    expect(html).toContain("Auto-fold Regions");
+    expect(parseSettingValue("delphiDcc.folding.autoFoldRegions", false)).toBe(false);
+    expect(() => parseSettingValue("delphiDcc.folding.autoFoldRegions", "no")).toThrow();
+  });
+
   it("validates typed and structured values", () => {
     expect(parseSettingValue("delphiDcc.language", "zh-cn")).toBe("zh-cn");
     expect(parseSettingValue("delphiDcc.resourceBuild", false)).toBe(false);

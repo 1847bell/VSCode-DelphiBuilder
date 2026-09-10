@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.2.15
+
+- Recognize `{$REGION}` / `{$ENDREGION}` folding directives in Delphi source files and auto-collapse them on open (`delphiDcc.folding.autoFoldRegions`).
+
 ## 0.2.14
 
 - Hide the `.dproj` suffix in the project tree and add commands to move projects up or down within a group.
