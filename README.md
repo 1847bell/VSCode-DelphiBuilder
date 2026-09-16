@@ -12,6 +12,7 @@ Links: [Repository](https://github.com/1847bell/VSCode-DelphiBuilder) · [Issues
 - Add `.dproj` files from the Explorer context menu, reorder projects within a group, move projects between groups, or remove them from a group without deleting project files.
 - Automatically sort groups by name, move groups up or down manually, rename groups, and refresh the project view.
 - Select the active configuration for each grouped project and start Win32 or Win64 builds from the project tree.
+- Use the Reveal Project Location button on a project row to jump to the Explorer view with the `.dproj` file selected.
 - Build, Rebuild, Cancel Build, Show Build Plan, and Change Output Path commands.
 - Keep output-path history per project, with configuration and platform-specific overrides.
 - Show the exact compiler path, working directory, arguments, resource steps, warnings, and expected artifacts in the Build Plan.

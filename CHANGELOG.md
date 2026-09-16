@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.2.16
+
+- Add a Reveal Project Location button to each project row in the Delphi Projects view. The button jumps to the Explorer view and selects the `.dproj` file.
+
 ## 0.2.15
 
 - Recognize `{$REGION}` / `{$ENDREGION}` folding directives in Delphi source files and auto-collapse them on open (`delphiDcc.folding.autoFoldRegions`).

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import * as vscode from "vscode";
@@ -283,6 +284,23 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
       return;
     }
     await this.save(removeProjectFromGroup(this.groups, group.id, project.filePath));
+  }
+
+  public async revealProject(argument: unknown): Promise<void> {
+    const reference = readProjectReference(argument);
+    if (!reference) {
+      throw new Error(localize("tree.error.projectUnavailable"));
+    }
+    const project = this.findProject(reference);
+    if (!project) {
+      throw new Error(localize("tree.error.projectNotInView"));
+    }
+    if (!existsSync(project.filePath)) {
+      throw new Error(localize("tree.revealProject.missing", {
+        project: path.basename(project.filePath)
+      }));
+    }
+    await vscode.commands.executeCommand("revealInExplorer", vscode.Uri.file(project.filePath));
   }
 
   public async activateConfiguration(argument: unknown): Promise<void> {

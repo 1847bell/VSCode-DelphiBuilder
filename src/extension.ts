@@ -48,6 +48,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("delphiDcc.moveProjectUp", (argument) => runSafely(output, () => projectTree!.moveProjectWithinGroup(argument, "up"))),
     vscode.commands.registerCommand("delphiDcc.moveProjectDown", (argument) => runSafely(output, () => projectTree!.moveProjectWithinGroup(argument, "down"))),
     vscode.commands.registerCommand("delphiDcc.removeProject", (argument) => runSafely(output, () => projectTree!.removeProject(argument))),
+    vscode.commands.registerCommand("delphiDcc.revealProject", (argument) => runSafely(output, () => projectTree!.revealProject(argument))),
     vscode.commands.registerCommand("delphiDcc.refreshProjects", () => projectTree!.refresh()),
     vscode.commands.registerCommand("delphiDcc.openSettings", () => settingsPanel.show()),
     vscode.commands.registerCommand("delphiDcc.activateConfiguration", (argument) => runSafely(output, () => projectTree!.activateConfiguration(argument))),

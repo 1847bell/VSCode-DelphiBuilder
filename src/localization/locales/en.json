@@ -18,6 +18,8 @@
   "tree.removeProject.action": "Remove from Group",
   "tree.removeProject.confirm": "Remove {project} from {group}?",
   "tree.removeProject.detail": "This only removes the project from the extension group. The project file will not be deleted.",
+  "tree.revealProject": "Reveal Project Location",
+  "tree.revealProject.missing": "{project} was not found on disk.",
   "tree.projectCount.one": "{count} project",
   "tree.projectCount.other": "{count} projects",
   "tree.activeConfiguration": "Active: {configuration}",

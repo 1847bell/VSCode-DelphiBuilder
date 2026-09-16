@@ -15,6 +15,7 @@ interface ExtensionManifest {
       command: string;
       title: string;
       category: string;
+      icon?: string;
     }>;
     configuration: {
       title: string;
@@ -86,6 +87,7 @@ describe("extension manifest", () => {
       "delphiDcc.moveProjectUp",
       "delphiDcc.moveProjectDown",
       "delphiDcc.removeProject",
+      "delphiDcc.revealProject",
       "delphiDcc.activateConfiguration",
       "delphiDcc.showOutputPaths",
       "delphiXe7.buildProject",
@@ -109,6 +111,7 @@ describe("extension manifest", () => {
       "Move Project Up",
       "Move Project Down",
       "Remove from Group",
+      "Reveal Project Location",
       "Activate Configuration",
       "Show Current Output Paths",
       "Build for Win32",
@@ -163,6 +166,7 @@ describe("extension manifest", () => {
     const menu = manifest.contributes.menus["view/item/context"];
     const projectItems = menu.filter((item) => item.when?.includes("delphiGroupedProject"));
     expect(projectItems.map((item) => item.command)).toEqual([
+      "delphiDcc.revealProject",
       "delphiDcc.showOutputPaths",
       "delphiDcc.moveProject",
       "delphiDcc.moveProjectUp",
@@ -170,12 +174,20 @@ describe("extension manifest", () => {
       "delphiDcc.removeProject"
     ]);
     expect(projectItems.map((item) => item.group)).toEqual([
+      "inline@1",
       "navigation@1",
       "navigation@2",
       "navigation@3",
       "navigation@4",
       "navigation@5"
     ]);
+
+    const reveal = manifest.contributes.commands.find((item) => (
+      item.command === "delphiDcc.revealProject"
+    ));
+    expect(reveal?.icon).toBe("$(folder-opened)");
+    expect(englishNls["command.revealProject"]).toBe("Reveal Project Location");
+    expect(chineseNls["command.revealProject"]).toBe("定位到项目位置");
   });
 
   it("registers a Delphi Projects activity bar view", () => {

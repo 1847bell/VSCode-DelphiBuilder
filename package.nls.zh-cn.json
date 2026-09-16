@@ -14,6 +14,7 @@
   "command.moveProjectUp": "项目上移",
   "command.moveProjectDown": "项目下移",
   "command.removeProject": "从分组移除",
+  "command.revealProject": "定位到项目位置",
   "command.activateConfiguration": "激活配置",
   "command.showOutputPaths": "查看当前输出路径",
   "command.buildWin32": "编译 Win32",

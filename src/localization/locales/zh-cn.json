@@ -18,6 +18,8 @@
   "tree.removeProject.action": "从分组移除",
   "tree.removeProject.confirm": "从 {group} 中移除 {project}？",
   "tree.removeProject.detail": "此操作只会将项目移出扩展分组，不会删除项目文件。",
+  "tree.revealProject": "定位到项目位置",
+  "tree.revealProject.missing": "磁盘上未找到 {project}。",
   "tree.projectCount.one": "{count} 个项目",
   "tree.projectCount.other": "{count} 个项目",
   "tree.activeConfiguration": "当前配置：{configuration}",
