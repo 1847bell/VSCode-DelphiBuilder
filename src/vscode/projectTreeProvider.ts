@@ -549,6 +549,21 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
         }
       },
       {
+        kind: "action",
+        id: `delphi-change-version:${key}`,
+        label: localize("tree.changeVersion"),
+        description: node.details.activeConfiguration,
+        icon: "edit",
+        command: {
+          command: "delphiXe7.changeVersion",
+          title: localize("tree.changeVersion"),
+          arguments: [{
+            project: node.project.filePath,
+            configuration: node.details.activeConfiguration
+          }]
+        }
+      },
+      {
         kind: "configurations",
         groupId: node.groupId,
         project: node.project,
@@ -565,8 +580,7 @@ implements vscode.TreeDataProvider<DelphiProjectTreeNode>, vscode.Disposable {
         .map((item) => item.name);
       const requested = configurations.find((item) => (
         item.toLocaleLowerCase() === project.activeConfiguration?.toLocaleLowerCase()
-      )) ?? configurations.find((item) => item.toLocaleLowerCase() === "debug")
-        ?? configurations[0];
+      ));
       const evaluations = PLATFORMS.map((platform) => evaluateDproj(content, project.filePath, {
         configuration: requested,
         platform

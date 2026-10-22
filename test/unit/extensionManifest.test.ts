@@ -95,7 +95,8 @@ describe("extension manifest", () => {
       "delphiXe7.rebuildProject",
       "delphiXe7.cancelBuild",
       "delphiXe7.showBuildPlan",
-      "delphiXe7.changeOutputPath"
+      "delphiXe7.changeOutputPath",
+      "delphiXe7.changeVersion"
     ]);
     expect(manifest.contributes.commands.map((item) => resolveEnglish(item.title))).toEqual([
       "New Group",
@@ -119,7 +120,8 @@ describe("extension manifest", () => {
       "Rebuild for Win32",
       "Cancel Build",
       "Show Build Plan",
-      "Change Output Path"
+      "Change Output Path",
+      "Change Version Number"
     ]);
     expect(manifest.contributes.commands.map((item) => resolveEnglish(item.category)))
       .toEqual(Array(manifest.contributes.commands.length).fill("Delphi DCC Builder"));

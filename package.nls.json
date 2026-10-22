@@ -23,6 +23,7 @@
   "command.cancelBuild": "Cancel Build",
   "command.showBuildPlan": "Show Build Plan",
   "command.changeOutputPath": "Change Output Path",
+  "command.changeVersion": "Change Version Number",
   "viewContainer.delphiProjects": "Delphi",
   "view.projects": "Projects",
   "language.english": "English",

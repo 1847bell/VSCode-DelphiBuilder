@@ -58,7 +58,11 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("delphiXe7.rebuildProject", (argument) => runSafely(output, () => commands!.build(argument, true))),
     vscode.commands.registerCommand("delphiXe7.cancelBuild", (argument) => runSafely(output, () => commands!.cancel(argument))),
     vscode.commands.registerCommand("delphiXe7.showBuildPlan", (argument) => runSafely(output, () => commands!.showBuildPlan(argument))),
-    vscode.commands.registerCommand("delphiXe7.changeOutputPath", (argument) => runSafely(output, () => commands!.changeOutputPath(argument)))
+    vscode.commands.registerCommand("delphiXe7.changeOutputPath", (argument) => runSafely(output, () => commands!.changeOutputPath(argument))),
+    vscode.commands.registerCommand("delphiXe7.changeVersion", (argument) => runSafely(output, async () => {
+      await commands!.changeVersion(argument);
+      projectTree!.refresh();
+    }))
   );
 }
 

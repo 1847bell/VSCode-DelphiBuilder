@@ -1,10 +1,11 @@
 import { ChildProcessWithoutNullStreams, spawn } from "node:child_process";
-import { access, mkdir, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { finished } from "node:stream/promises";
 import iconv from "iconv-lite";
 import { BuildPlan, BuildResult } from "../core/types";
 import { localize } from "../localization/localizer";
+import { MINIMAL_PROJECT_RESOURCE, updateVersionResource } from "./versionResource";
 
 export class CompilerRunner {
   private child: ChildProcessWithoutNullStreams | undefined;
@@ -71,6 +72,19 @@ export class CompilerRunner {
           cancelled: this.cancellationRequested
         };
       }
+    }
+
+    if (plan.projectResource?.versionInfo) {
+      const { output: resourceFile, versionInfo } = plan.projectResource;
+      const original = await readFile(resourceFile);
+      const updated = updateVersionResource(original, versionInfo);
+      if (!original.equals(updated)) {
+        await writeFile(resourceFile, updated);
+      }
+      capture(`${localize("compiler.output.versionResource", {
+        version: versionInfo.fileVersion.join("."),
+        path: resourceFile
+      })}\n`);
     }
 
     capture(`${localize("compiler.output.delphiCompile", {
@@ -201,12 +215,3 @@ async function ensureProjectResource(output: string): Promise<boolean> {
     throw error;
   }
 }
-
-// Standard empty Win32 .res null header.
-const MINIMAL_PROJECT_RESOURCE = Buffer.from([
-  0x00, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00,
-  0xff, 0xff, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00,
-  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-  0x00, 0x00, 0x00, 0x00,
-  0x00, 0x00, 0x00, 0x00
-]);

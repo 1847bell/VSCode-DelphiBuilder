@@ -23,6 +23,7 @@
   "command.cancelBuild": "取消编译",
   "command.showBuildPlan": "查看编译计划",
   "command.changeOutputPath": "修改输出路径",
+  "command.changeVersion": "修改版本号",
   "viewContainer.delphiProjects": "Delphi",
   "view.projects": "项目",
   "language.english": "English",

@@ -47,7 +47,9 @@ export function evaluateDproj(
 
   const projectChildren = getChildren(projectNode);
   const configurations = readConfigurations(projectChildren);
-  const configuration = selectConfiguration(configurations, options.configuration);
+  const requestedConfiguration = options.configuration
+    ?? readDefaultConfiguration(projectChildren, options);
+  const configuration = selectConfiguration(configurations, requestedConfiguration);
   const platform = options.platform ?? "Win32";
   const properties = new PropertyBag(options.initialProperties);
   seedConfigurationProperties(properties, configurations, configuration, platform);
@@ -161,6 +163,18 @@ function readConfigurations(projectChildren: OrderedNode[]): ProjectConfiguratio
     }
   }
   return configurations;
+}
+
+function readDefaultConfiguration(
+  projectChildren: OrderedNode[],
+  options: EvaluateDprojOptions
+): string | undefined {
+  const properties = new PropertyBag(options.initialProperties);
+  properties.set("Platform", options.platform ?? "Win32");
+  for (const group of findElements(projectChildren, "PropertyGroup")) {
+    evaluatePropertyGroup(group, properties, []);
+  }
+  return properties.get("Config")?.trim() || undefined;
 }
 
 function selectConfiguration(

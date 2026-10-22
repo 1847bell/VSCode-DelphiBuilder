@@ -31,9 +31,20 @@ export interface ResourceBuildStep {
   output: string;
 }
 
+export type ProjectVersionNumber = [number, number, number, number];
+
+export interface ProjectVersionInfo {
+  fileVersion: ProjectVersionNumber;
+  productVersion: ProjectVersionNumber;
+  languageId: number;
+  fileType: 1 | 2;
+  strings: Record<string, string>;
+}
+
 export interface ProjectResourceBuildStep {
   output: string;
   createIfMissing: true;
+  versionInfo?: ProjectVersionInfo;
 }
 
 export interface BuildPlan {

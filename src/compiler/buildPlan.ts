@@ -16,6 +16,7 @@ import {
 } from "../environment/bdsLocator";
 import { evaluateDprojFile } from "../project/dprojParser";
 import { buildDccArguments } from "./dccArgumentBuilder";
+import { getProjectVersionInfo } from "./versionResource";
 
 export interface CreateBuildPlanOptions {
   version?: DelphiVersion;
@@ -115,6 +116,13 @@ async function createResourcePlan(
       resources: required.join(", ")
     }));
     return {};
+  }
+
+  if (projectResource) {
+    const versionInfo = getProjectVersionInfo(evaluation);
+    if (versionInfo) {
+      projectResource.versionInfo = versionInfo;
+    }
   }
 
   if (rcItems.length > 0) {

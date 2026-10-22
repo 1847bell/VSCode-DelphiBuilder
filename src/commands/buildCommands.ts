@@ -20,6 +20,11 @@ import {
   updateDprojOutputPath,
   updateProjectOutputPathHistory
 } from "../project/dprojOutputPath";
+import {
+  isValidDprojVersion,
+  readDprojVersion,
+  updateDprojVersion
+} from "../project/dprojVersion";
 import { discoverConfigurations, evaluateDproj } from "../project/dprojParser";
 import {
   getProjectSelectionHistory,
@@ -291,6 +296,44 @@ export class BuildCommands implements vscode.Disposable {
         configuration: configurationDefinition.name,
         platform,
         path: outputPath
+      })
+    );
+  }
+
+  public async changeVersion(argument: unknown): Promise<void> {
+    const commandOptions = parseCommandOptions(argument);
+    const projectFile = await this.resolveProject(argument, commandOptions);
+    const platform = resolvePlatform(commandOptions.platform);
+    const initialContent = await this.readProjectContent(projectFile);
+    const configuration = await this.resolveConfiguration(
+      projectFile,
+      commandOptions.configuration,
+      localize("tree.changeVersion"),
+      platform,
+      initialContent
+    );
+    const versionOptions = { projectFile, configuration, platform };
+    const currentVersion = readDprojVersion(initialContent, versionOptions) ?? "1.0.0.0";
+    const version = await vscode.window.showInputBox({
+      title: localize("build.projectVersion.title", { project: path.basename(projectFile) }),
+      prompt: localize("build.projectVersion.prompt", { configuration, platform }),
+      value: currentVersion,
+      valueSelection: [0, currentVersion.length],
+      validateInput: (value) => isValidDprojVersion(value)
+        ? undefined
+        : localize("build.projectVersion.invalid")
+    });
+    if (version === undefined) {
+      return;
+    }
+
+    const latestContent = await this.readProjectContent(projectFile);
+    const updatedContent = updateDprojVersion(latestContent, version, versionOptions);
+    await this.writeProjectContent(projectFile, latestContent, updatedContent);
+    void vscode.window.showInformationMessage(
+      localize("build.projectVersion.updated", {
+        project: path.basename(projectFile),
+        version: version.trim()
       })
     );
   }

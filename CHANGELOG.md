@@ -1,5 +1,23 @@
 # Change Log
 
+## 0.2.19
+
+- Synchronize the effective `.dproj` version information into the wildcard project `.res` before DCC builds, so version edits appear in the compiled EXE or DLL.
+- Preserve non-version project resources and reject malformed `.res` files before updating them.
+- Verify the compiled DLL file and product versions with real XE7 Win32 and Win64 builds.
+
+## 0.2.18
+
+- Read the effective `FileVersion` for the active project configuration and platform, including Base, platform, and configuration overrides.
+- Use the `.dproj` default configuration in the sidebar when no configuration has been selected, while preserving explicit selections.
+- Save version changes in a configuration and platform override so other build configurations keep their versions, and show the selected configuration in the version editor.
+- Exclude local `.dproj` files from VSIX packages.
+
+## 0.2.17
+
+- Add a Change Version Number action below Change Output Path in the Delphi Projects sidebar, with version validation and saving to the `.dproj` file.
+- Prefill the version editor from `FileVersion` in `VerInfo_Keys`, including when `ProductVersion` has a different value.
+
 ## 0.2.16
 
 - Add a Reveal Project Location button to each project row in the Delphi Projects view. The button jumps to the Explorer view and selects the `.dproj` file.

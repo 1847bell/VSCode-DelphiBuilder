@@ -84,6 +84,35 @@ describe("createBuildPlan resource preprocessing", () => {
     expect(plan.resourceBuild).toBeUndefined();
   });
 
+  it("carries the effective version into the wildcard project resource without requiring BRCC32", async () => {
+    const plan = await createBuildPlan({
+      projectFile: path.resolve("test/fixtures/VersionResourceSample.dproj"),
+      configuration: "Release",
+      compilerPath: process.execPath,
+      brcc32Path: path.resolve("missing-BRCC32.exe")
+    });
+
+    expect(plan.projectResource?.versionInfo).toMatchObject({
+      fileVersion: [5, 0, 0, 26],
+      productVersion: [5, 0, 0, 26],
+      fileType: 2,
+      languageId: 1033
+    });
+    expect(plan.resourceBuild).toBeUndefined();
+  });
+
+  it("disables version resource updates with resource preprocessing", async () => {
+    const plan = await createBuildPlan({
+      projectFile: path.resolve("test/fixtures/VersionResourceSample.dproj"),
+      configuration: "Release",
+      compilerPath: process.execPath,
+      resourceBuild: false
+    });
+
+    expect(plan.projectResource).toBeUndefined();
+    expect(plan.warnings.join(" ")).toContain("Resource preprocessing is disabled");
+  });
+
   it("reports an invalid explicit BRCC32 path for resource projects", async () => {
     await expect(createBuildPlan({
       projectFile: resourceProject,

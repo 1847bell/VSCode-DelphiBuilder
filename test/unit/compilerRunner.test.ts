@@ -1,4 +1,5 @@
-import { readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { CompilerRunner } from "../../src/compiler/compilerRunner";
@@ -77,6 +78,33 @@ describe("CompilerRunner", () => {
     const secondResult = await runner.run(buildPlan, "utf8", () => undefined);
     expect(secondResult.exitCode).toBe(0);
     expect(await readFile(output)).toEqual(existing);
+  });
+
+  it("leaves an invalid project resource untouched and stops before compilation", async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), "delphi-invalid-resource-"));
+    try {
+      const output = path.join(directory, "Project.res");
+      const invalid = Buffer.from("existing-invalid-project-resource");
+      await writeFile(output, invalid);
+      const chunks: string[] = [];
+      await expect(new CompilerRunner().run(plan({
+        projectResource: {
+          output,
+          createIfMissing: true,
+          versionInfo: {
+            fileVersion: [5, 0, 0, 27],
+            productVersion: [5, 0, 0, 27],
+            languageId: 1033,
+            fileType: 2,
+            strings: { FileVersion: "5.0.0.27", ProductVersion: "5.0.0.27" }
+          }
+        }
+      }), "utf8", (text) => chunks.push(text))).rejects.toThrow(".res file is invalid");
+      expect(await readFile(output)).toEqual(invalid);
+      expect(chunks.join("")).not.toContain("runner-ok");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 
   it("does not start the compiler when resource preprocessing fails", async () => {

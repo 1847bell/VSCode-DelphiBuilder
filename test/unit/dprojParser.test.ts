@@ -55,6 +55,26 @@ describe("dprojParser", () => {
     expect(result.properties.DCC_DcuOutput).toBe(".\\dcu\\Win64\\Debug");
   });
 
+  it("uses the project-declared default configuration", () => {
+    const versionedProjectFile = path.resolve("test/fixtures/VersionedSample.dproj");
+    const versionedContent = readFileSync(versionedProjectFile, "utf8");
+    const result = evaluateDproj(versionedContent, versionedProjectFile);
+
+    expect(result.configuration).toBe("Release");
+    expect(result.properties.VerInfo_Keys).toContain("FileVersion=5.0.0.26;");
+  });
+
+  it("keeps an explicit configuration ahead of the project default", () => {
+    const versionedProjectFile = path.resolve("test/fixtures/VersionedSample.dproj");
+    const versionedContent = readFileSync(versionedProjectFile, "utf8");
+    const result = evaluateDproj(versionedContent, versionedProjectFile, {
+      configuration: "Debug"
+    });
+
+    expect(result.configuration).toBe("Debug");
+    expect(result.properties.VerInfo_Keys).toContain("FileVersion=1.0.0.0;");
+  });
+
   it("rejects a configuration that the project does not define", () => {
     expect(() => evaluateDproj(content, projectFile, { configuration: "Staging" }))
       .toThrow("Configuration 'Staging' is not defined");

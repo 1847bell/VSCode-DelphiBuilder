@@ -3,6 +3,7 @@
 src/**
 !delphi-versions/**
 test/**
+*.dproj
 coverage/**
 *.md
 **/*.bak
