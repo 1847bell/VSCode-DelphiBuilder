@@ -160,6 +160,7 @@
   "projectVersion.error.empty": "Version number cannot be empty.",
   "projectVersion.error.invalid": "Version number must contain 1 to 4 numeric components separated by dots.",
   "projectVersion.error.projectClosing": "Invalid dproj file: Project closing element was not found.",
+  "projectVersion.error.ineffective": "Another property group overrides the version for {configuration}|{platform}; the project file was not changed.",
   "compiler.error.alreadyRunning": "This compiler runner is already running.",
   "compiler.error.fileMissing": "{label} was not found: {file}",
   "compiler.label.delphi": "Delphi compiler",

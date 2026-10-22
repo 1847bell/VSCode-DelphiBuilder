@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.2.20
+
+- Edit version fields in the existing configuration and platform property group, preserving output paths, manifests, and raw metadata expressions. Add a standard scoped group only when none exists.
+- Merge older `DelphiDccBuilderVersion` overrides back into the existing group, removing version-only overrides while preserving unrelated properties.
+- Verify migrated project values with MSBuild and compiled DLL versions with XE7 Win32 and Win64.
+
 ## 0.2.19
 
 - Synchronize the effective `.dproj` version information into the wildcard project `.res` before DCC builds, so version edits appear in the compiled EXE or DLL.

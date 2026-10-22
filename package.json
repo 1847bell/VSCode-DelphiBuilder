@@ -2,7 +2,7 @@
   "name": "delphi-dcc-builder",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.2.19",
+  "version": "0.2.20",
   "icon": "images/icon.png",
   "publisher": "1847bell",
   "author": "Alex Niu",

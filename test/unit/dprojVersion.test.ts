@@ -68,14 +68,88 @@ describe("dprojVersion", () => {
     }).properties.VerInfo_Build).toBeUndefined();
   });
 
-  it("reuses the selected version override on repeated edits", () => {
+  it("updates the existing configuration group without adding override groups", () => {
     const first = updateDprojVersion(scopedContent, "5.0.0.27", releaseOptions);
     const updated = updateDprojVersion(first, "5.0.0.28", releaseOptions);
 
     expect(readDprojVersion(updated, releaseOptions)).toBe("5.0.0.28");
-    expect(updated.match(/Label="DelphiDccBuilderVersion"/g)).toHaveLength(1);
-    expect(updated.indexOf('Label="DelphiDccBuilderVersion"')).toBeLessThan(
-      updated.indexOf("<Import")
+    expect(updated.match(/<PropertyGroup\b/g)).toHaveLength(
+      scopedContent.match(/<PropertyGroup\b/g)!.length
+    );
+    expect(updated).not.toContain('Label="DelphiDccBuilderVersion"');
+    expect(updated).toContain("<VerInfo_Build>28</VerInfo_Build>");
+  });
+
+  it("merges a legacy override back into the original group even when the version is unchanged", () => {
+    const legacy = withLegacyOverride(scopedContent);
+    const updated = updateDprojVersion(legacy, "5.0.0.27", releaseOptions);
+
+    expect(readDprojVersion(updated, releaseOptions)).toBe("5.0.0.27");
+    expect(updated).not.toContain('Label="DelphiDccBuilderVersion"');
+    expect(updated.match(/<PropertyGroup\b/g)).toHaveLength(
+      scopedContent.match(/<PropertyGroup\b/g)!.length
+    );
+    expect(updated).toContain("<VerInfo_Build>27</VerInfo_Build>");
+    expect(updated).not.toContain("<VerInfo_Build>26</VerInfo_Build>");
+    expect(updated).toContain("CompanyName=Legacy &amp; Company;");
+    expect(updated).toContain("ProductName=$(Config)");
+    expect(readDprojVersion(updated, { ...releaseOptions, configuration: "Debug" })).toBe("1.0.0.0");
+  });
+
+  it("preserves unrelated properties inside a legacy override when migrating version fields", () => {
+    const legacy = withLegacyOverride(scopedContent, "      <DCC_Define>KEEP_CUSTOM_DEFINE</DCC_Define>\n");
+    const updated = updateDprojVersion(legacy, "5.0.0.28", releaseOptions);
+    const result = evaluateDproj(updated, scopedProjectFile, releaseOptions);
+
+    expect(readDprojVersion(updated, releaseOptions)).toBe("5.0.0.28");
+    expect(result.properties.DCC_Define).toBe("KEEP_CUSTOM_DEFINE");
+    expect(updated).toContain("<DCC_Define>KEEP_CUSTOM_DEFINE</DCC_Define>");
+    expect(updated.match(/<VerInfo_Build>/g)).toHaveLength(1);
+  });
+
+  it("preserves output paths, manifests, and raw metadata expressions in the existing group", () => {
+    const original = scopedContent.replace(
+      "    <VerInfo_Build>26</VerInfo_Build>",
+      "    <VerInfo_Build>26</VerInfo_Build>\n"
+        + "    <DCC_ExeOutput>$(HIS50)</DCC_ExeOutput>\n"
+        + "    <Manifest_File>None</Manifest_File>"
+    ).replace(/(FileVersion=5\.0\.0\.26;[^<]*?ProductName=);/,
+      (_match, prefix: string) => `${prefix}$(Config);`);
+    const updated = updateDprojVersion(original, "5.0.0.27", releaseOptions);
+
+    expect(updated).toContain("<DCC_ExeOutput>$(HIS50)</DCC_ExeOutput>");
+    expect(updated).toContain("<Manifest_File>None</Manifest_File>");
+    expect(updated).toContain("ProductName=$(Config);ProductVersion=5.0.0.27");
+    expect(updated.match(/<PropertyGroup\b/g)).toHaveLength(
+      original.match(/<PropertyGroup\b/g)!.length
+    );
+  });
+
+  it("adds a standard scoped group only when that configuration and platform have no existing group", () => {
+    const win64Options = { ...releaseOptions, platform: "Win64" as const };
+    const first = updateDprojVersion(scopedContent, "6.0.0.1", win64Options);
+    const updated = updateDprojVersion(first, "6.0.0.2", win64Options);
+
+    expect(readDprojVersion(updated, win64Options)).toBe("6.0.0.2");
+    expect(readDprojVersion(updated, releaseOptions)).toBe("5.0.0.26");
+    expect(updated).not.toContain('Label="DelphiDccBuilderVersion"');
+    expect(updated.match(/<PropertyGroup\b/g)).toHaveLength(
+      scopedContent.match(/<PropertyGroup\b/g)!.length + 1
+    );
+  });
+
+  it("does not mistake a self-closing group for the next configuration group", () => {
+    const original = scopedContent.replace(
+      "  <PropertyGroup Condition=\"'$(Cfg_2_Win32)'!=''\">",
+      "  <PropertyGroup Condition=\"'$(Cfg_1_Win32)'!=''\" />\n"
+        + "  <PropertyGroup Condition=\"'$(Cfg_2_Win32)'!=''\">"
+    );
+    const updated = updateDprojVersion(original, "5.0.0.27", releaseOptions);
+
+    expect(readDprojVersion(updated, releaseOptions)).toBe("5.0.0.27");
+    expect(readDprojVersion(updated, { ...releaseOptions, configuration: "Debug" })).toBe("1.0.0.0");
+    expect(updated.match(/<PropertyGroup\b/g)).toHaveLength(
+      original.match(/<PropertyGroup\b/g)!.length
     );
   });
 
@@ -156,3 +230,16 @@ describe("dprojVersion", () => {
     expect(isValidDprojVersion("  ")).toBe(false);
   });
 });
+
+function withLegacyOverride(value: string, extra = ""): string {
+  const legacy = `  <PropertyGroup Condition="'$(Config)'=='Release' and '$(Platform)'=='Win32'" Label="DelphiDccBuilderVersion">
+    <VerInfo_MajorVer>5</VerInfo_MajorVer>
+    <VerInfo_MinorVer>0</VerInfo_MinorVer>
+    <VerInfo_Release>0</VerInfo_Release>
+    <VerInfo_Build>27</VerInfo_Build>
+    <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
+    <VerInfo_Keys>CompanyName=Legacy &amp; Company;FileVersion=5.0.0.27;ProductVersion=5.0.0.27;ProductName=$(Config)</VerInfo_Keys>
+${extra}  </PropertyGroup>
+`;
+  return value.replace("  <Import", legacy + "  <Import");
+}

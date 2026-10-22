@@ -160,6 +160,7 @@
   "projectVersion.error.empty": "版本号不能为空。",
   "projectVersion.error.invalid": "版本号必须由 1 到 4 个数字段组成，并使用英文句点分隔。",
   "projectVersion.error.projectClosing": "无效的 dproj 文件：未找到 Project 结束元素。",
+  "projectVersion.error.ineffective": "其他属性组覆盖了 {configuration}|{platform} 的版本号，项目文件未修改。",
   "compiler.error.alreadyRunning": "此编译运行器已在运行。",
   "compiler.error.fileMissing": "未找到{label}：{file}",
   "compiler.label.delphi": "Delphi 编译器",
