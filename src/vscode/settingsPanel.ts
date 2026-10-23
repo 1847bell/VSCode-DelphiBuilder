@@ -2,11 +2,15 @@ import * as crypto from "node:crypto";
 import * as vscode from "vscode";
 import { getLanguage, localize } from "../localization/localizer";
 import {
+  getSettingDefinitions,
   parseSettingValue,
   renderSettingsPage,
-  SETTING_DEFINITIONS,
   SettingsValues
 } from "./settingsPage";
+import {
+  DEFAULT_DELPHI_VERSION,
+  resolveDelphiVersion
+} from "../delphi/versions";
 
 interface UpdateSettingMessage {
   type: "updateSetting";
@@ -16,6 +20,7 @@ interface UpdateSettingMessage {
 
 export class DelphiSettingsPanel implements vscode.Disposable {
   private panel: vscode.WebviewPanel | undefined;
+  private configurationListener: vscode.Disposable | undefined;
 
   public show(): void {
     if (this.panel) {
@@ -36,6 +41,15 @@ export class DelphiSettingsPanel implements vscode.Disposable {
     this.panel.webview.onDidReceiveMessage((message: unknown) => {
       void this.handleMessage(message);
     });
+    this.configurationListener = vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("delphiDcc.version", firstWorkspaceUri())) {
+        this.refresh();
+      }
+    });
+    this.panel.onDidDispose(() => {
+      this.configurationListener?.dispose();
+      this.configurationListener = undefined;
+    });
     this.refresh();
   }
 
@@ -52,6 +66,8 @@ export class DelphiSettingsPanel implements vscode.Disposable {
   }
 
   public dispose(): void {
+    this.configurationListener?.dispose();
+    this.configurationListener = undefined;
     this.panel?.dispose();
     this.panel = undefined;
   }
@@ -69,7 +85,8 @@ export class DelphiSettingsPanel implements vscode.Disposable {
     try {
       value = parseSettingValue(message.key, message.value);
     } catch {
-      const definition = SETTING_DEFINITIONS.find((candidate) => candidate.key === message.key);
+      const definition = getSettingDefinitions(currentVersion())
+        .find((candidate) => candidate.key === message.key);
       const label = definition ? localize(definition.label) : message.key;
       void vscode.window.showErrorMessage(localize("settings.error.invalidValue", { setting: label }));
       return;
@@ -80,12 +97,17 @@ export class DelphiSettingsPanel implements vscode.Disposable {
     const name = message.key.slice(separator + 1);
     const target = hasWorkspace() ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global;
     await vscode.workspace.getConfiguration(section, firstWorkspaceUri()).update(name, value, target);
+    this.refresh();
   }
 }
 
 function readSettings(): SettingsValues {
   const values: SettingsValues = {};
-  for (const definition of SETTING_DEFINITIONS) {
+  const configuredVersion = vscode.workspace
+    .getConfiguration("delphiDcc", firstWorkspaceUri())
+    .get<string>("version", DEFAULT_DELPHI_VERSION);
+  const version = resolveDelphiVersion(configuredVersion);
+  for (const definition of getSettingDefinitions(version)) {
     const separator = definition.key.indexOf(".");
     const section = definition.key.slice(0, separator);
     const name = definition.key.slice(separator + 1);
@@ -103,7 +125,14 @@ function isUpdateSettingMessage(message: unknown): message is UpdateSettingMessa
   const candidate = message as Partial<UpdateSettingMessage>;
   return candidate.type === "updateSetting"
     && typeof candidate.key === "string"
-    && SETTING_DEFINITIONS.some((definition) => definition.key === candidate.key);
+    && getSettingDefinitions(currentVersion()).some((definition) => definition.key === candidate.key);
+}
+
+function currentVersion(): ReturnType<typeof resolveDelphiVersion> {
+  const configuredVersion = vscode.workspace
+    .getConfiguration("delphiDcc", firstWorkspaceUri())
+    .get<string>("version", DEFAULT_DELPHI_VERSION);
+  return resolveDelphiVersion(configuredVersion);
 }
 
 function firstWorkspaceUri(): vscode.Uri | undefined {

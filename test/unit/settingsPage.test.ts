@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  getSettingDefinitions,
   parseSettingValue,
   renderSettingsPage,
   SETTING_DEFINITIONS
@@ -15,6 +16,21 @@ describe("extension settings page", () => {
     for (const definition of SETTING_DEFINITIONS) {
       expect(html).toContain(`data-setting="${definition.key}"`);
     }
+  });
+
+  it("selects version-specific compiler paths, arguments, and environment settings", () => {
+    const definitions = getSettingDefinitions("XE7");
+    const keys = definitions.map((definition) => definition.key);
+    expect(keys).toContain("delphiXe7.compilerPath");
+    expect(keys).toContain("delphiXe7.compiler64Path");
+    expect(keys).toContain("delphiXe7.additionalArguments");
+    expect(keys).toContain("delphiXe7.environment");
+    expect(definitions.find((definition) => definition.key === "delphiDcc.version")?.options)
+      .toEqual([{ value: "XE7", text: "Delphi XE7" }]);
+
+    const html = renderSettingsPage("en", { "delphiDcc.version": "XE7" }, "test-nonce");
+    expect(html).toContain("Delphi XE7");
+    expect(html).toContain('data-setting="delphiXe7.compilerPath"');
   });
 
   it("renders translated labels when Chinese is selected", () => {

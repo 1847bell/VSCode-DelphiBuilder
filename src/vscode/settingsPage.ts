@@ -1,17 +1,26 @@
 import {
   ExtensionLanguage,
   localizeFor,
+  MessageArguments,
   MessageKey
 } from "../localization/localizer";
+import {
+  DEFAULT_DELPHI_VERSION,
+  getDelphiVersionConfiguration,
+  getSupportedDelphiVersions,
+  resolveDelphiVersion
+} from "../delphi/versions";
+import { DelphiVersion } from "../core/types";
 
 type SettingKind = "boolean" | "integer" | "json-array" | "json-object" | "select" | "text";
 
 interface SettingOption {
   value: string;
   label?: MessageKey;
+  text?: string;
 }
 
-interface SettingDefinition {
+export interface SettingDefinition {
   key: string;
   section: "general" | "compiler";
   kind: SettingKind;
@@ -23,7 +32,7 @@ interface SettingDefinition {
   maximum?: number;
 }
 
-export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
+const GENERAL_SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   {
     key: "delphiDcc.language",
     section: "general",
@@ -43,7 +52,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
     label: "settings.version.label",
     description: "settings.version.description",
     defaultValue: "XE7",
-    options: [{ value: "XE7" }]
+    options: []
   },
   {
     key: "delphiDcc.resourceBuild",
@@ -61,24 +70,10 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
     description: "settings.autoFoldRegions.description",
     defaultValue: true
   },
+];
+
+const COMPILER_SETTING_TEMPLATES: readonly Omit<SettingDefinition, "key">[] = [
   {
-    key: "delphiXe7.compilerPath",
-    section: "compiler",
-    kind: "text",
-    label: "settings.compilerPath.label",
-    description: "settings.compilerPath.description",
-    defaultValue: ""
-  },
-  {
-    key: "delphiXe7.compiler64Path",
-    section: "compiler",
-    kind: "text",
-    label: "settings.compiler64Path.label",
-    description: "settings.compiler64Path.description",
-    defaultValue: ""
-  },
-  {
-    key: "delphiXe7.rsvarsPath",
     section: "compiler",
     kind: "text",
     label: "settings.rsvarsPath.label",
@@ -86,7 +81,6 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
     defaultValue: ""
   },
   {
-    key: "delphiXe7.brcc32Path",
     section: "compiler",
     kind: "text",
     label: "settings.brcc32Path.label",
@@ -94,7 +88,6 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
     defaultValue: ""
   },
   {
-    key: "delphiXe7.showBuildPlanMenu",
     section: "compiler",
     kind: "select",
     label: "settings.showBuildPlanMenu.label",
@@ -106,7 +99,6 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
     ]
   },
   {
-    key: "delphiXe7.outputPathHistoryLimit",
     section: "compiler",
     kind: "integer",
     label: "settings.outputPathHistoryLimit.label",
@@ -116,7 +108,6 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
     maximum: 15
   },
   {
-    key: "delphiXe7.outputEncoding",
     section: "compiler",
     kind: "select",
     label: "settings.outputEncoding.label",
@@ -129,7 +120,6 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
     ]
   },
   {
-    key: "delphiXe7.additionalArguments",
     section: "compiler",
     kind: "json-array",
     label: "settings.additionalArguments.label",
@@ -137,7 +127,6 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
     defaultValue: []
   },
   {
-    key: "delphiXe7.environment",
     section: "compiler",
     kind: "json-object",
     label: "settings.environment.label",
@@ -146,10 +135,61 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   }
 ];
 
+export function getSettingDefinitions(version: DelphiVersion = DEFAULT_DELPHI_VERSION): readonly SettingDefinition[] {
+  const configuration = getDelphiVersionConfiguration(version);
+  const general = GENERAL_SETTING_DEFINITIONS.map((definition) => (
+    definition.key === "delphiDcc.version"
+      ? {
+          ...definition,
+          options: getSupportedDelphiVersions().map((supportedVersion) => ({
+            value: supportedVersion,
+            text: getDelphiVersionConfiguration(supportedVersion).displayName
+          }))
+        }
+      : definition
+  ));
+  const compiler = [
+    createCompilerPathDefinition(configuration.settingsSection, configuration.compilerSettingNames.Win32, "settings.compilerPath"),
+    createCompilerPathDefinition(configuration.settingsSection, configuration.compilerSettingNames.Win64, "settings.compiler64Path"),
+    ...COMPILER_SETTING_TEMPLATES.map((definition, index) => ({
+      ...definition,
+      key: `${configuration.settingsSection}.${["rsvarsPath", "brcc32Path", "showBuildPlanMenu", "outputPathHistoryLimit", "outputEncoding", "additionalArguments", "environment"][index]}`
+    }))
+  ];
+  return [...general, ...compiler];
+}
+
+export const SETTING_DEFINITIONS: readonly SettingDefinition[] = getSettingDefinitions();
+
+function createCompilerPathDefinition(
+  section: string,
+  settingName: string,
+  labelPrefix: "settings.compilerPath" | "settings.compiler64Path"
+): SettingDefinition {
+  return {
+    key: `${section}.${settingName}`,
+    section: "compiler",
+    kind: "text",
+    label: `${labelPrefix}.label` as MessageKey,
+    description: `${labelPrefix}.description` as MessageKey,
+    defaultValue: ""
+  };
+}
+
+function findSettingDefinition(key: string): SettingDefinition | undefined {
+  for (const version of getSupportedDelphiVersions()) {
+    const definition = getSettingDefinitions(version).find((candidate) => candidate.key === key);
+    if (definition) {
+      return definition;
+    }
+  }
+  return undefined;
+}
+
 export type SettingsValues = Record<string, unknown>;
 
 export function parseSettingValue(key: string, rawValue: unknown): unknown {
-  const definition = SETTING_DEFINITIONS.find((candidate) => candidate.key === key);
+  const definition = findSettingDefinition(key);
   if (!definition) {
     throw new Error("Unknown setting");
   }
@@ -208,16 +248,22 @@ export function renderSettingsPage(
   values: SettingsValues,
   nonce: string
 ): string {
-  const t = (key: MessageKey): string => localizeFor(language, key);
-  const general = SETTING_DEFINITIONS
+  const selectedVersion = resolveDelphiVersion(
+    typeof values["delphiDcc.version"] === "string" ? values["delphiDcc.version"] : undefined
+  );
+  const configuration = getDelphiVersionConfiguration(selectedVersion);
+  const definitions = getSettingDefinitions(selectedVersion);
+  const t = (key: MessageKey, arguments_: MessageArguments = {}): string => localizeFor(language, key, arguments_);
+  const general = definitions
     .filter((definition) => definition.section === "general")
     .map((definition) => renderSetting(definition, values, language))
     .join("");
-  const compiler = SETTING_DEFINITIONS
+  const compiler = definitions
     .filter((definition) => definition.section === "compiler")
     .map((definition) => renderSetting(definition, values, language))
     .join("");
   const title = t("settings.title");
+  const compilerTitle = t("settings.section.compiler", { version: configuration.displayName });
 
   return `<!DOCTYPE html>
 <html lang="${language}">
@@ -251,7 +297,7 @@ export function renderSettingsPage(
   <main>
     <h1>Delphi DCC Builder: ${escapeHtml(title)}</h1>
     <section><h2>${escapeHtml(t("settings.section.general"))}</h2>${general}</section>
-    <section><h2>${escapeHtml(t("settings.section.compiler"))}</h2>${compiler}</section>
+    <section><h2>${escapeHtml(compilerTitle)}</h2>${compiler}</section>
   </main>
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
@@ -285,7 +331,7 @@ function renderSetting(
 
   if (definition.kind === "select") {
     const options = definition.options!.map((option) => {
-      const optionLabel = option.label ? localizeFor(language, option.label) : option.value;
+      const optionLabel = option.text ?? (option.label ? localizeFor(language, option.label) : option.value);
       return `<option value="${escapeHtml(option.value)}"${option.value === value ? " selected" : ""}>${escapeHtml(optionLabel)}</option>`;
     }).join("");
     control = `<select id="${id}" data-setting="${definition.key}" data-kind="select">${options}</select>`;
