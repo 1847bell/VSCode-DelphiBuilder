@@ -15,12 +15,13 @@ Links: [Repository](https://github.com/1847bell/VSCode-DelphiBuilder) · [Issues
 - Use the Reveal Project Location button on a project row to jump to the Explorer view with the `.dproj` file selected.
 - Build, Rebuild, Cancel Build, Show Build Plan, and Change Output Path commands.
 - Keep output-path history per project, with configuration and platform-specific overrides.
+- Edit project version numbers for a specific configuration and platform, and synchronize version information into the compiled EXE or DLL.
 - Show the exact compiler path, working directory, arguments, resource steps, warnings, and expected artifacts in the Build Plan.
 - Decode DCC output using the system code page, CP936, or UTF-8 and publish source locations to Problems.
 - Prepare resources before DCC:
   - Compile `.dproj` `RcCompile` items with the BDS `BRCC32.exe`.
   - Create a minimal project `.res` when the main source contains `{$R *.res}` and the file is missing.
-  - Never overwrite an existing project `.res`.
+  - Update version information in an existing project `.res` while preserving icons and other non-version resources.
   - Report `RcItem` project resources as a warning because direct DCC mode does not reproduce the complete MSBuild resource merge.
 - Discover `rsvars.bat` and `BRCC32.exe` automatically, with explicit path overrides when an installation is non-standard.
 - Use `--no-config` so the Build Plan is not silently changed by a compiler `.cfg` file.
@@ -51,13 +52,23 @@ If you need another Delphi version and can implement the support, clone the repo
 
 The Explorer context menu can also add a `.dproj` to the selected project group and start a build. **Show Build Plan** is available from the Command Palette and can be added to the Explorer menu with `delphiXe7.showBuildPlanMenu`.
 
+## Changing a project version number
+
+1. In the Delphi Projects view, expand a project and select its active configuration, such as `Debug` or `Release`.
+2. Select **Change Version Number** below **Change Output Path**. You can also run **Delphi DCC Builder: Change Version Number** from the Command Palette and select a project and configuration when prompted.
+3. Check the configuration and platform shown in the input prompt, enter 1 to 4 numeric components separated by dots (for example, `1.2.3.4`), and press Enter to save the change to the `.dproj` file. The project tree action targets the active configuration on **Win32**.
+
+The editor starts with the effective `FileVersion` for that configuration and platform, taking inherited settings into account. It falls back to `ProductVersion`, numeric version fields, or `1.0.0.0` when no version is defined. Saving updates both `FileVersion` and `ProductVersion` and the numeric version fields in the existing configuration/platform property group; a scoped group is added if needed. Other configurations and platforms keep their version settings, and unrelated project settings are preserved.
+
+On the next build, with `delphiDcc.resourceBuild` enabled (the default) and `{$R *.res}` in the main source, the extension synchronizes the effective `.dproj` version information into the project `.res` before DCC runs. The compiled EXE or DLL then includes the updated file and product versions, while icons and other non-version resources are preserved.
+
 ## Settings
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
 | `delphiDcc.language` | `en` | Extension UI language: `en` or `zh-cn`. |
 | `delphiDcc.version` | `XE7` | Selects the version configuration used by the Build Plan. |
-| `delphiDcc.resourceBuild` | `true` | Prepare missing project resources and compile `RcCompile` resources. |
+| `delphiDcc.resourceBuild` | `true` | Prepare missing project resources, synchronize project version information, and compile `RcCompile` resources. |
 | `delphiXe7.compilerPath` | empty | Required absolute path to `DCC32.exe`. |
 | `delphiXe7.compiler64Path` | empty | Optional absolute path to `DCC64.exe`. |
 | `delphiXe7.rsvarsPath` | empty | Optional absolute path to `rsvars.bat`; empty means auto-discover. |

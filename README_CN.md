@@ -15,12 +15,13 @@
 - 在项目名称行点击 **定位到项目位置** 按钮，即可跳转到资源管理器并定位到 `.dproj` 文件。
 - 提供编译、重新编译、取消编译、查看编译计划和修改输出路径命令。
 - 按项目保存输出路径历史，并为不同配置和平台保存独立覆盖值。
+- 修改指定配置和平台的项目版本号，并将版本信息同步到编译生成的 EXE 或 DLL。
 - 在 Build Plan 中显示编译器路径、工作目录、参数、资源步骤、警告和预期产物。
 - 支持系统编码、CP936、UTF-8 解码 DCC 输出，并将源文件位置发布到 Problems 面板。
 - 在 DCC 前处理资源：
   - 使用 BDS 的 `BRCC32.exe` 编译 `.dproj` 中的 `RcCompile` 项。
   - 主源包含 `{$R *.res}` 且同名项目资源缺失时，创建最小有效 `.res`。
-  - 绝不覆盖已有项目 `.res`。
+  - 更新已有项目 `.res` 中的版本信息，同时保留图标及其他非版本资源。
   - `RcItem` 项目资源无法由直接 DCC 流程完整模拟，会在 Build Plan 中给出警告。
 - 自动发现 `rsvars.bat` 和 `BRCC32.exe`，非标准安装也可以显式配置路径。
 - 固定使用 `--no-config`，避免编译器 `.cfg` 文件静默改变 Build Plan。
@@ -51,13 +52,23 @@
 
 也可以在资源管理器右键菜单中将 `.dproj` 添加到当前项目分组并启动编译。**查看编译计划**始终可以从命令面板打开；设置 `delphiXe7.showBuildPlanMenu` 为 `show` 后，也会出现在资源管理器菜单中。
 
+## 修改项目版本号
+
+1. 在 Delphi 项目视图中展开项目，选择当前配置，例如 `Debug` 或 `Release`。
+2. 点击 **修改输出路径** 下方的 **修改版本号**。也可以从命令面板运行 **Delphi DCC Builder: 修改版本号**，按提示选择项目和配置。
+3. 核对输入框提示中的配置和平台，输入由点分隔的 1 至 4 段数字（例如 `1.2.3.4`），按 Enter 将修改保存到 `.dproj` 文件。项目树中的入口针对当前配置的 **Win32** 平台。
+
+输入框会预填该配置和平台下实际生效的 `FileVersion`，并考虑继承的设置；缺失时依次使用 `ProductVersion`、数字版本字段，没有定义版本时使用 `1.0.0.0`。保存时会在已有的配置/平台属性组中同时更新 `FileVersion`、`ProductVersion` 和数字版本字段，必要时新增对应的属性组。其他配置和平台保留各自的版本设置，输出路径等无关项目设置也会保留。
+
+下次编译时，只要 `delphiDcc.resourceBuild` 已启用（默认开启），且主源文件包含 `{$R *.res}`，扩展就会在运行 DCC 前将 `.dproj` 中实际生效的版本信息同步到项目 `.res`。生成的 EXE 或 DLL 因而包含更新后的文件版本和产品版本，同时保留图标及其他非版本资源。
+
 ## 设置项
 
 | 设置 | 默认值 | 作用 |
 | --- | --- | --- |
 | `delphiDcc.language` | `en` | 扩展界面语言：`en` 或 `zh-cn`。 |
 | `delphiDcc.version` | `XE7` | 选择 Build Plan 使用的版本配置。 |
-| `delphiDcc.resourceBuild` | `true` | 准备缺失的项目资源并编译 `RcCompile` 资源。 |
+| `delphiDcc.resourceBuild` | `true` | 准备缺失的项目资源、同步项目版本信息并编译 `RcCompile` 资源。 |
 | `delphiXe7.compilerPath` | 空 | `DCC32.exe` 的必填绝对路径。 |
 | `delphiXe7.compiler64Path` | 空 | `DCC64.exe` 的可选绝对路径。 |
 | `delphiXe7.rsvarsPath` | 空 | `rsvars.bat` 的可选绝对路径；为空时自动发现。 |
