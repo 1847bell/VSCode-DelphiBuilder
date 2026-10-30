@@ -61,4 +61,14 @@ describe("MCP project access", () => {
     await writeFile(file, JSON.stringify({ roots: ["missing"] }));
     await expect(loadConfig(file)).rejects.toMatchObject({ code: "ENOENT" });
   });
+
+  it("loads UTF-8 BOM configuration produced by Windows PowerShell", async () => {
+    const file = path.join(temporary, "server-bom.json");
+    await writeFile(file, `\uFEFF${JSON.stringify({ roots: ["project"], compilerPath: "tools/dcc32.exe" })}`, "utf8");
+    const config = await loadConfig(file);
+    expect(config.roots).toEqual([root]);
+    expect(config.compilerPath).toBe(path.join(temporary, "tools/dcc32.exe"));
+    await writeFile(file, "\uFEFF{invalid json", "utf8");
+    await expect(loadConfig(file)).rejects.toBeInstanceOf(SyntaxError);
+  });
 });

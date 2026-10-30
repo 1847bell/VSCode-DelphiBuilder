@@ -2,12 +2,20 @@
 
 ## MCP branch — Unreleased
 
-- Keep `mcp-only` as a permanent independent MCP-only branch; do not merge it into `main`.
+- Keep `DelphiBuilder-MCP` as a permanent independent MCP-only branch; do not merge it into `main`.
 - Add a standalone stdio MCP server with seven tools for project inspection, build plans, asynchronous build/status/cancellation, scoped output paths, and project versions.
 - Load trusted project roots and compiler settings from an independent JSON configuration; no VS Code runtime is required.
 - Preserve UTF-8 project encoding/BOM and configuration isolation, enforce project write/build locks and root checks, and return structured compiler diagnostics with paginated logs.
 - Cancel active builds on shutdown and retain the most recent 50 completed jobs per process.
 - Add project-boundary, project-mutation, and real-child-process lifecycle regression coverage.
+- Align inspection, mutations and build planning with the same property environment; preserve effective conditional version metadata and applicable raw expressions.
+- Propagate MCP request cancellation through job startup and preparation/resource/DCC boundaries; remove cancellation polling.
+- Include build-plan warnings in every build status, including failed and cancelled jobs.
+- Save project edits with same-directory atomic replacement so concurrent inspection cannot read partial XML.
+- Resolve output-directory self references against pre-edit values without repeated suffix expansion; accept UTF-8 BOM configuration files.
+- Rename the dedicated branch to `DelphiBuilder-MCP`; add Windows ZIP packaging with bundled runtime dependencies, version data, third-party notices, a sample project and SHA-256 output.
+- Add a Chinese trial manual and reusable AI Skill covering setup, authorization, paginated logs, cancellation and safe project edits. Standalone MCP requires Node.js 22 or newer, not VS Code or a VSIX.
+- Mark the MCP branch as an experimental development preview: local smoke checks do not constitute full real-project or independent-machine acceptance testing.
 
 ## 0.2.20
 

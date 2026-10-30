@@ -1,7 +1,8 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { readFile, rename, unlink, chmod, open, stat } from "node:fs/promises";
 import path from "node:path";
 import { TextDecoder } from "node:util";
-import { createBuildPlan } from "../compiler/buildPlan";
+import { createBuildPlan, resolveBuildEnvironment } from "../compiler/buildPlan";
 import { BuildPlan, DelphiPlatform, DprojEvaluation, ProjectConfiguration, ProjectResourceItem } from "../core/types";
 import { evaluateDproj } from "../project/dprojParser";
 import { readDprojVersion, updateDprojVersion } from "../project/dprojVersion";
@@ -34,10 +35,15 @@ export class ProjectService {
     const projectFile = await this.access.resolveProject(selection.projectFile);
     const before = await readFile(projectFile);
     const text = decodeUtf8(before);
-    const evaluation = evaluateDproj(text, projectFile, {
-      ...selection, initialProperties: { ...process.env, ...this.config.environment }
+    const { initialProperties } = await resolveBuildEnvironment({
+      compilerPath: selection.platform === "Win64" ? this.config.compiler64Path : this.config.compilerPath,
+      environment: this.config.environment,
+      platform: selection.platform ?? "Win32",
+      version: this.config.version,
+      rsVarsPath: this.config.rsvarsPath
     });
-    return this.infoFromEvaluation(evaluation, projectFile, text);
+    const evaluation = evaluateDproj(text, projectFile, { ...selection, initialProperties });
+    return this.infoFromEvaluation(evaluation, projectFile, text, initialProperties);
   }
 
   public async getBuildPlan(selection: ProjectSelection & { rebuild?: boolean }): Promise<BuildPlan> {
@@ -77,28 +83,34 @@ export class ProjectService {
     try {
       const before = await readFile(projectFile);
       const text = decodeUtf8(before);
-      const evaluationOptions = {
-        ...selection, initialProperties: { ...process.env, ...this.config.environment }
-      };
+      const { initialProperties } = await resolveBuildEnvironment({
+        compilerPath: selection.platform === "Win64" ? this.config.compiler64Path : this.config.compilerPath,
+        environment: this.config.environment,
+        platform: selection.platform,
+        version: this.config.version,
+        rsVarsPath: this.config.rsvarsPath
+      });
+      const evaluationOptions = { ...selection, initialProperties };
       const evaluation = evaluateDproj(text, projectFile, evaluationOptions);
       const configurationKey = evaluation.configurations.find((item) => item.name.toLocaleLowerCase() === evaluation.configuration.toLocaleLowerCase())?.key ?? evaluation.configuration;
       const updated = updateDprojOutputPath(text, {
         configuration: evaluation.configuration,
         configurationKey,
         platform: selection.platform,
-        outputPath: selection.outputPath
+        outputPath: freezeOutputSelfReference(selection.outputPath, evaluation.properties)
       });
-      const edited = evaluateDproj(updated, projectFile, evaluationOptions);
-      const requested = expandProperties(selection.outputPath.trim(), new PropertyBag(edited.properties));
+      const requested = expandProperties(selection.outputPath.trim(), new PropertyBag(evaluation.properties));
       if (requested.unresolved.length > 0) {
         throw new Error(`Unresolved output path properties: ${requested.unresolved.join(", ")}`);
       }
+      const edited = evaluateDproj(updated, projectFile, evaluationOptions);
       const effective = effectiveOutputPath(edited);
       const requestedPath = path.resolve(path.dirname(projectFile), requested.value.replace(/^"(.*)"$/, "$1"));
       if (path.relative(effective, requestedPath) !== "") throw new Error("Edited output path is not effective");
       await this.access.assertPath(effective);
       await writeIfUnchanged(projectFile, before, Buffer.from(updated, "utf8"));
-      return this.infoFromEvaluation(edited, projectFile, updated);
+      return this.infoFromEvaluation(edited, projectFile, updated, initialProperties);
+      
     } finally {
       release();
     }
@@ -115,21 +127,24 @@ export class ProjectService {
     try {
       const before = await readFile(projectFile);
       const text = decodeUtf8(before);
+      const { initialProperties } = await resolveBuildEnvironment({
+        compilerPath: selection.platform === "Win64" ? this.config.compiler64Path : this.config.compilerPath,
+        environment: this.config.environment,
+        platform: selection.platform,
+        version: this.config.version,
+        rsVarsPath: this.config.rsvarsPath
+      });
       const updated = updateDprojVersion(text, selection.version, {
-        projectFile,
-        configuration: selection.configuration,
-        platform: selection.platform
+        projectFile, configuration: selection.configuration, platform: selection.platform, initialProperties
       });
       await writeIfUnchanged(projectFile, before, Buffer.from(updated, "utf8"));
-      const edited = evaluateDproj(updated, projectFile, {
-        ...selection, initialProperties: { ...process.env, ...this.config.environment }
-      });
-      return this.infoFromEvaluation(edited, projectFile, updated);
+      const edited = evaluateDproj(updated, projectFile, { ...selection, initialProperties });
+      return this.infoFromEvaluation(edited, projectFile, updated, initialProperties);
     } finally {
       release();
     }
   }
-  private infoFromEvaluation(evaluation: DprojEvaluation, projectFile: string, content: string): ProjectServiceResult {
+  private infoFromEvaluation(evaluation: DprojEvaluation, projectFile: string, content: string, initialProperties?: Record<string, string>): ProjectServiceResult {
     const outputPath = effectiveOutputPath(evaluation);
     return {
       projectFile,
@@ -138,7 +153,7 @@ export class ProjectService {
       configurations: evaluation.configurations,
       mainSource: evaluation.mainSource,
       outputPath,
-      version: readDprojVersion(content, { projectFile, configuration: evaluation.configuration, platform: evaluation.platform }),
+      version: readDprojVersion(content, { projectFile, configuration: evaluation.configuration, platform: evaluation.platform, initialProperties }),
       resources: evaluation.resourceItems,
       warnings: evaluation.warnings
     };
@@ -150,9 +165,18 @@ function decodeUtf8(bytes: Buffer): string {
 }
 
 async function writeIfUnchanged(file: string, original: Buffer, updated: Buffer): Promise<void> {
-  const current = await readFile(file);
-  if (!current.equals(original)) throw new Error(`Project changed while editing: ${file}`);
-  await writeFile(file, preserveEncoding(original, updated));
+  const temporary = path.join(path.dirname(file), `.${path.basename(file)}.${randomUUID()}.tmp`);
+  try {
+    const mode = (await stat(file)).mode;
+    const handle = await open(temporary, "wx", mode);
+    try { await handle.writeFile(preserveEncoding(original, updated)); } finally { await handle.close(); }
+    await chmod(temporary, mode);
+    const current = await readFile(file);
+    if (!current.equals(original)) throw new Error(`Project changed while editing: ${file}`);
+    await rename(temporary, file);
+  } finally {
+    await unlink(temporary).catch((error: NodeJS.ErrnoException) => { if (error.code !== "ENOENT") throw error; });
+  }
 }
 
 function preserveEncoding(original: Buffer, updated: Buffer): Buffer {
@@ -160,6 +184,13 @@ function preserveEncoding(original: Buffer, updated: Buffer): Buffer {
     ? Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), updated.subarray(0, 3).equals(Buffer.from([0xef, 0xbb, 0xbf])) ? updated.subarray(3) : updated])
     : updated;
 }
+
+function freezeOutputSelfReference(value: string, properties: Record<string, string>): string {
+  return value.replace(/\$\(\s*DCC_ExeOutput\s*\)/gi, () => (
+    expandProperties(properties.DCC_ExeOutput ?? "", new PropertyBag(properties)).value
+  ));
+}
+
 
 function effectiveOutputPath(evaluation: DprojEvaluation): string {
   const value = expandProperties(

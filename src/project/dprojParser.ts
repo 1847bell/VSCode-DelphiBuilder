@@ -55,10 +55,11 @@ export function evaluateDproj(
   seedConfigurationProperties(properties, configurations, configuration, platform);
 
   const warnings: string[] = [];
+  const versionMetadata = { rawVersionInfoKeys: properties.get("VerInfo_Keys") };
   for (const node of projectChildren) {
     const name = getElementName(node);
     if (name === "PropertyGroup") {
-      evaluatePropertyGroup(node, properties, warnings);
+      evaluatePropertyGroup(node, properties, warnings, versionMetadata);
     } else if (name === "Import") {
       const project = getAttribute(node, "Project") ?? "(unknown)";
       warnings.push(localize("dproj.warning.import", { project }));
@@ -92,6 +93,7 @@ export function evaluateDproj(
     configurations,
     resourceItems,
     properties: properties.toObject(),
+    rawVersionInfoKeys: versionMetadata.rawVersionInfoKeys,
     warnings: [...new Set(warnings)]
   };
 }
@@ -231,7 +233,8 @@ function seedConfigurationProperties(
 function evaluatePropertyGroup(
   group: OrderedNode,
   properties: PropertyBag,
-  warnings: string[]
+  warnings: string[],
+  versionMetadata?: { rawVersionInfoKeys?: string }
 ): void {
   const condition = getAttribute(group, "Condition");
   if (!tryEvaluateCondition(condition, properties, warnings)) {
@@ -248,6 +251,9 @@ function evaluatePropertyGroup(
       continue;
     }
     const rawValue = getText(getChildren(propertyNode));
+    if (versionMetadata && propertyName.toLocaleLowerCase() === "verinfo_keys") {
+      versionMetadata.rawVersionInfoKeys = rawValue.replace(/\$\(VerInfo_Keys\)/gi, () => versionMetadata.rawVersionInfoKeys ?? "");
+    }
     const expanded = expandMsBuildProperties(rawValue, properties);
     for (const name of expanded.unresolved) {
       if (name.toLocaleLowerCase() !== propertyName.toLocaleLowerCase()) {

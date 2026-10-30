@@ -32,32 +32,29 @@ export interface CreateBuildPlanOptions {
   environment?: Record<string, string>;
 }
 
+export async function resolveBuildEnvironment(
+  options: Pick<CreateBuildPlanOptions, "compilerPath" | "environment" | "platform" | "version" | "rsVarsPath">
+): Promise<{ bds: BdsEnvironment; environment: Record<string, string>; initialProperties: Record<string, string> }> {
+  const bds = await resolveBdsEnvironment(
+    options.compilerPath, options.environment, options.platform, options.version, options.rsVarsPath
+  );
+  const environment = {
+    ...Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined)),
+    ...bds.variables,
+    ...(options.environment ?? {})
+  };
+  return { bds, environment, initialProperties: { ...environment, DCC_UnitSearchPath: bds.libraryPath } };
+}
+
 export async function createBuildPlan(options: CreateBuildPlanOptions): Promise<BuildPlan> {
   const projectFile = path.resolve(options.projectFile);
   const version = options.version ?? DEFAULT_DELPHI_VERSION;
   const platform = options.platform ?? "Win32";
-  const bds = await resolveBdsEnvironment(
-    options.compilerPath,
-    options.environment,
-    platform,
-    version,
-    options.rsVarsPath
-  );
-  const inheritedEnvironment = Object.fromEntries(
-    Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined)
-  );
-  const environment = {
-    ...inheritedEnvironment,
-    ...bds.variables,
-    ...(options.environment ?? {})
-  };
+  const { bds, environment, initialProperties } = await resolveBuildEnvironment(options);
   const evaluation = await evaluateDprojFile(projectFile, {
     configuration: options.configuration,
     platform,
-    initialProperties: {
-      ...environment,
-      DCC_UnitSearchPath: bds.libraryPath
-    }
+    initialProperties
   });
   const dcc = buildDccArguments(evaluation, {
     version,

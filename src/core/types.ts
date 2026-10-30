@@ -21,6 +21,7 @@ export interface DprojEvaluation {
   configurations: ProjectConfiguration[];
   resourceItems: ProjectResourceItem[];
   properties: Record<string, string>;
+  rawVersionInfoKeys?: string;
   warnings: string[];
 }
 

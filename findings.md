@@ -109,3 +109,19 @@
 - 项目根目录与符号链接检查是应用层边界，不是操作系统沙箱；只运行可信项目和编译器配置。
 - 验证通过 TypeScript 检查、22 个测试文件/138 项测试，以及真实 MCP 客户端握手、七工具发现、Win32/Win64 编译和 EXE 执行、E2003 诊断、DLL 文件版本及取消编译。
 - 真实 MCP 冒烟从系统临时目录启动服务，证明配置和版本 JSON 加载不依赖客户端工作目录；临时项目和产物已清理。
+
+## 2026-10-30：MCP 审查修复依据
+- 已复现七项问题：环境条件版本元数据覆盖、MCP 请求取消后仍编译、阶段间取消后继续 DCC、构建状态丢失计划警告、非原子保存导致并发 XML 读取失败、输出路径自引用重复展开、BOM 配置解析失败。
+- 元数据案例：`REVIEW_FLAVOR=customer` 下构建使用 CustomerCo/CustomerApp，版本修改后错误变为 BaseCo/BaseApp 并丢失生效版权字段。
+- 请求取消案例：客户端未获得任务 ID，但实际生成 EXE；阶段取消案例：资源阶段取消后 DCC 仍启动并生成 DLL，任务却标记 cancelled。
+- 修复约束：保持项目查询不依赖编译器存在、允许编译期间查询；原子替换而非隐藏解析异常；统一属性环境、真实取消信号和构建警告，不添加重试补救。
+- 修复后的真实 MCP/XE7 冒烟覆盖七项问题；版本条件元数据与表达式保留、BOM 启动、自引用路径、原子读取、请求/任务交接/资源阶段取消均通过。
+- 取消是阶段边界停止，不回滚已完成的写入；原子替换避免服务自身半写入 XML，不宣称消除外部进程的文件系统竞争。
+
+## MCP 试用分发约束
+- 现有 MCP 构建将 npm 包保留为运行时依赖，不能只分发当前 `dist/mcp.js`；还必须带上 `delphi-versions/`。
+- MCP 不需要 VSIX 或 VS Code；试用交付采用 ZIP 目录包，保留 stdio 与独立 JSON 配置。
+- 试用包采用全依赖 JS bundle；运行时只需 Node.js 22+、相邻 `delphi-versions/` 与用户自己的 Delphi 安装，无需安装 npm 运行依赖。
+- `@nodable/entities@3.0.0` 的 npm 发布物遗漏仓库根目录 MIT LICENSE；从[发布者仓库许可证 API](https://api.github.com/repos/nodable/val-parsers/license)取得原文，固定 blob `561468f111a66df52cc0f1934642bb9fdd22a212`，保存到 `licenses/` 并纳入发行包第三方声明。未知缺失许可仍令打包失败。
+- 实际解压 ZIP 已证明 npm 运行依赖全部包含，无 node_modules/NODE_PATH、从其他 cwd 启动可用；`delphi-versions/` 必须保持相邻布局。
+- 试用手册明确 Sample 无 `{$R *.res}`，其版本修改只能验证 `.dproj`，不能冒称 EXE 版本资源已更新；Skill 区分查询/构建/写入授权、任务启动与终态、旧产物与本次成功。

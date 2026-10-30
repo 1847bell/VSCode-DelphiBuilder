@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { CompilerRunner } from "../../src/compiler/compilerRunner";
+import { MINIMAL_PROJECT_RESOURCE } from "../../src/compiler/versionResource";
 import { BuildPlan } from "../../src/core/types";
 
 const fixture = path.resolve("test/fixtures/Sample.dproj");
@@ -148,5 +149,50 @@ describe("CompilerRunner", () => {
     expect(result.stage).toBe("resource");
     expect(result.cancelled).toBe(true);
     expect(result.output).not.toContain("runner-ok");
+  });
+
+  it("does not prepare or spawn when already aborted", async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), "delphi-pre-aborted-"));
+    try {
+      const controller = new AbortController();
+      controller.abort();
+      const output = path.join(directory, "Project.res");
+      const marker = path.join(directory, "compiler-started");
+      const result = await new CompilerRunner().run(plan({
+        arguments: ["-e", `require("node:fs").writeFileSync(${JSON.stringify(marker)}, "started")`],
+        projectResource: { output, createIfMissing: true }
+      }), "utf8", () => undefined, controller.signal);
+      expect(result.cancelled).toBe(true);
+      await expect(readFile(output)).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(readFile(marker)).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("honors cancellation between resource creation, version update and compiler launch", async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), "delphi-resource-gap-"));
+    try {
+      const output = path.join(directory, "Project.res");
+      const marker = path.join(directory, "compiler-started");
+      const runner = new CompilerRunner();
+      let cancelling: Promise<boolean> | undefined;
+      const result = await runner.run(plan({
+        arguments: ["-e", `require("node:fs").writeFileSync(${JSON.stringify(marker)}, "started")`],
+        projectResource: {
+          output, createIfMissing: true,
+          versionInfo: {
+            fileVersion: [3, 4, 5, 6], productVersion: [3, 4, 5, 6], languageId: 1033,
+            fileType: 1, strings: { FileVersion: "3.4.5.6", ProductVersion: "3.4.5.6" }
+          }
+        }
+      }), "utf8", () => { cancelling ??= runner.cancel(); });
+      expect(await cancelling).toBe(true);
+      expect(result.cancelled).toBe(true);
+      expect(await readFile(output)).toEqual(MINIMAL_PROJECT_RESOURCE);
+      await expect(readFile(marker)).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 });

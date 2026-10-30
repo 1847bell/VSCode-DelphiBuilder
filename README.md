@@ -1,12 +1,16 @@
 # Delphi DCC Builder
 
+> **Development preview: MCP features are still under development and have not completed full real-machine testing on real-world projects or independent user environments. Stability and production readiness are not guaranteed.** Verification so far covers automated tests and local XE7 sample smoke checks, not complete feature acceptance. Trial only on backed-up project copies.
+
 Build Delphi projects directly from Visual Studio Code with the Delphi command-line compilers. The extension evaluates `.dproj` configuration values, prepares a visible Build Plan, runs `DCC32.exe` or `DCC64.exe`, and publishes compiler diagnostics to the Problems panel.
 
 Links: [Repository](https://github.com/1847bell/VSCode-DelphiBuilder) · [Issues and feature requests](https://github.com/1847bell/VSCode-DelphiBuilder/issues) · [Delphi version configuration guide](docs/DELPHI_VERSION_CONFIGURATION.md) · [中文说明](README_CN.md)
 
 ## Independent MCP branch
 
-**`mcp-only` is a permanent, independent MCP development branch. It must not be merged into `main`; future work on this branch is limited to MCP functionality.** The existing VS Code extension is retained without feature changes. The MCP server reuses its Delphi core and runs without VS Code.
+**`DelphiBuilder-MCP` is a permanent, independent MCP development branch. It must not be merged into `main`; future work on this branch is limited to MCP functionality.** The existing VS Code extension is retained without feature changes. The MCP server reuses its Delphi core and runs without VS Code.
+
+Trial delivery: [Chinese trial manual](docs/MCP_TRIAL_GUIDE_CN.md) · [AI Skill / reusable instructions](skills/delphi-builder-mcp/SKILL.md). `npm run package:mcp` creates `release/DelphiBuilder-MCP-<version>.zip`, an unpacked directory and a SHA-256 file. The Windows ZIP includes bundled npm runtime dependencies, version data, documentation, licenses and a sample project. Extract it and configure your client; no `npm install`, VS Code or VSIX is required. Install Node.js 22/24 LTS and your licensed Delphi toolchain separately.
 
 ### Setup
 
@@ -40,7 +44,11 @@ The transport is stdio. Launching the server manually and seeing it wait for inp
 
 Use `mcp.config.example.json` as the configuration template. `roots` must contain existing trusted project directories. Configuration-relative roots and executable paths resolve against the configuration file, not the process working directory. Tool-relative `projectFile` paths resolve against the first root; relative output paths resolve against the `.dproj` directory. Output edits preserve resolvable expressions such as `$(Config)` and `$(Platform)`.
 
+Configuration files accept UTF-8 with or without a BOM, including Windows PowerShell output. In output edits, `$(DCC_ExeOutput)` extends the pre-edit effective directory and is materialized once; rereading the saved project does not append the suffix again.
+
 `compilerPath` configures Win32; optional `compiler64Path` configures Win64. Project inspection does not require a compiler path. Other settings are `version` (default `XE7`), `resourceBuild` (default `true`), `outputEncoding` (`system`, `cp936`, `utf8`), optional `rsvarsPath` and `brcc32Path`, `additionalArguments`, and `environment`. Compiler paths, arguments and environment overrides come only from the trusted local configuration, never from tool arguments. Local `mcp.config.json` is ignored by Git.
+
+Inspection, mutations and build planning use the same BDS/rsvars/configured property environment. Version edits preserve effective non-version metadata and retain raw expressions where their meaning is unchanged.
 
 ### Tools
 
@@ -49,7 +57,7 @@ Use `mcp.config.example.json` as the configuration template. `roots` must contai
 | `get_project_info` | Inspect configurations, selected configuration/platform, main source, effective output directory, version, resources and warnings. |
 | `get_build_plan` | Return a build plan without writing files or compiling; inherited environment values are omitted. |
 | `start_build` | Start an asynchronous build; pass `rebuild: true` to rebuild. Returns a `jobId`. |
-| `get_build_status` | Read state, paginated logs, process result, structured diagnostics and expected/existing artifacts. |
+| `get_build_status` | Read state, build-plan warnings, paginated logs, process result, structured diagnostics and expected/existing artifacts. |
 | `cancel_build` | Request cancellation; query status until terminal. |
 | `set_output_path` | Persist `DCC_ExeOutput` for one explicit configuration/platform. |
 | `set_project_version` | Persist file/product version for one explicit configuration/platform; 1–4 numeric components, each 0–65535. |
@@ -61,13 +69,14 @@ For example, call `start_build` with `{"projectFile":"App/App.dproj","configurat
 ### Safety and lifecycle
 
 - Builds and edits are mutually exclusive per project; different projects can build concurrently. Project inspection remains available during builds.
-- Project mutations require valid UTF-8, preserve BOM/newlines, and compare original bytes before writing. Save editor changes before calling MCP; unsaved VS Code/IDE buffers are not visible to this process.
+- Project mutations require valid UTF-8, preserve BOM/newlines, and compare original bytes before atomically replacing the file from a same-directory temporary file. Concurrent readers see a complete old or new project. Save editor changes before calling MCP; unsaved VS Code/IDE buffers are not visible to this process.
 - Builds write artifacts and may create/update project `.res` files. They never automatically execute the resulting program. Main source, resource input/output and recognized artifact/output paths must remain within configured roots; known symlink escapes are rejected. External library search paths remain supported.
+- MCP cancellation received while `start_build` is handling its request cancels pending startup or the newly created job. After receiving a `jobId`, use `cancel_build`. Cancellation is checked between preparation, resource and DCC stages; completed writes are not rolled back.
 - Root checks are not an OS sandbox. Only allow trusted projects/compiler configuration; malicious source, filesystem races and arbitrary compiler behavior are not isolated.
 - Jobs are process-local. The latest 50 completed jobs are retained; restarting invalidates IDs. Closing stdin or sending an exit signal cancels active builds and waits for cleanup.
-- Deploy `dist/mcp.js` together with installed npm dependencies and the project's `delphi-versions/` directory. No VSIX, VS Code settings, project groups or editor history are required.
+- Deploy the bundled `dist/mcp.js` with the `delphi-versions/` directory in the original layout. npm runtime dependencies are included in the JS bundle. No VSIX, VS Code settings, project groups or editor history are required.
 
-Development checks: `npm run check`, `npm test`, `npm run compile:mcp`. See [中文 MCP 说明](README_CN.md#mcp-独立开发分支) for the full Chinese setup. The original extension documentation follows below.
+Development checks: `npm run check`, `npm test`, `npm run compile:mcp`; Windows trial packaging: `npm run package:mcp` (requires PowerShell). See the [trial manual](docs/MCP_TRIAL_GUIDE_CN.md) for setup and acceptance steps. The original extension documentation follows below.
 
 ## Features
 

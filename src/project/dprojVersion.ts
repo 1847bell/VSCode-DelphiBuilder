@@ -1,6 +1,7 @@
 import { DelphiPlatform } from "../core/types";
 import { localize } from "../localization/localizer";
 import { evaluateDproj } from "./dprojParser";
+import { expandProperties, PropertyBag } from "./propertyResolver";
 
 const VERSION_COMPONENT_NAMES = [
   "VerInfo_MajorVer",
@@ -16,6 +17,7 @@ export interface DprojVersionOptions {
   projectFile: string;
   configuration: string;
   platform: DelphiPlatform;
+  initialProperties?: Record<string, string | undefined>;
 }
 
 export function readDprojVersion(
@@ -66,11 +68,6 @@ export function updateDprojVersion(
   const isTarget = (attributes: string): boolean => targetsConfigurationPlatform(
     readAttribute(attributes, "Condition"), evaluation.configuration, configurationKey, options.platform
   );
-  const legacyGroups = [...content.matchAll(PROPERTY_GROUP_PATTERN)].filter((match) => (
-    readAttribute(match[1], "Label") === LEGACY_VERSION_GROUP_LABEL && isTarget(match[1])
-  ));
-  const legacyKeys = legacyGroups.map((match) => readPropertyXml(match[0], "VerInfo_Keys"))
-    .filter((value) => value !== undefined).at(-1);
   const cleaned = content.replace(PROPERTY_GROUP_PATTERN, (group: string, attributes: string) => {
     if (readAttribute(attributes, "Label") !== LEGACY_VERSION_GROUP_LABEL || !isTarget(attributes)) {
       return group;
@@ -89,8 +86,7 @@ export function updateDprojVersion(
   const target = candidates.filter((match) => VERSION_PROPERTY_NAMES.some((name) => (
     readPropertyXml(match[0], name) !== undefined
   ))).at(-1) ?? candidates.at(-1);
-  const currentKeys = legacyKeys ?? (target ? readPropertyXml(target[0], "VerInfo_Keys") : undefined)
-    ?? escapeXmlText(evaluation.properties.VerInfo_Keys ?? "");
+  const currentKeys = escapeXmlText(preserveMetadataExpressions(evaluation.rawVersionInfoKeys ?? "", evaluation.properties));
   const components = normalized.split(".");
   const properties: Array<[string, string]> = VERSION_COMPONENT_NAMES.map((name, index) => (
     [name, components[index] ?? "0"]
@@ -110,6 +106,10 @@ export function updateDprojVersion(
   } else {
     updated = insertVersionGroup(cleaned, evaluation.configuration, options.platform, properties, newline);
   }
+  const scoped = insertVersionGroup(cleaned, evaluation.configuration, options.platform, properties, newline);
+  const expected = evaluateDproj(scoped, options.projectFile, options).properties;
+  const actual = evaluateDproj(updated, options.projectFile, options).properties;
+  if (VERSION_PROPERTY_NAMES.some((name) => actual[name] !== expected[name])) updated = scoped;
   if (readDprojVersion(updated, options) !== normalized) {
     throw new Error(localize("projectVersion.error.ineffective", {
       configuration: evaluation.configuration,
@@ -117,6 +117,14 @@ export function updateDprojVersion(
     }));
   }
   return updated;
+}
+
+function preserveMetadataExpressions(raw: string, properties: Record<string, string>): string {
+  const entries = (properties.VerInfo_Keys ?? "").split(";");
+  const bag = new PropertyBag(properties);
+  return raw.split(";").map((entry, index) => (
+    expandProperties(entry, bag).value === entries[index] ? entry : entries[index] ?? entry
+  )).join(";");
 }
 
 function targetsConfigurationPlatform(

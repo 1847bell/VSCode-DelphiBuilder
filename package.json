@@ -438,6 +438,7 @@
     "watch": "node esbuild.mjs --watch",
     "compile:mcp": "node esbuild.mcp.mjs",
     "start:mcp": "node dist/mcp.js",
+    "package:mcp": "npm run check && npm test && node package.mcp.mjs",
     "check": "tsc --noEmit",
     "test": "vitest run",
     "test:xe7": "vitest run --config vitest.integration.config.ts",

@@ -20,7 +20,8 @@ export type McpConfig = z.infer<typeof configSchema>;
 
 export async function loadConfig(file: string): Promise<McpConfig> {
   const absolute = path.resolve(file);
-  const config = configSchema.parse(JSON.parse(await readFile(absolute, "utf8")));
+  const text = await readFile(absolute, "utf8");
+  const config = configSchema.parse(JSON.parse(text.replace(/^\uFEFF/, "")));
   const base = path.dirname(absolute);
   config.roots = await Promise.all(config.roots.map(async (root) => {
     const resolved = await realpath(path.resolve(base, root));

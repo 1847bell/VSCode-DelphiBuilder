@@ -58,7 +58,11 @@ export function createMcpServer(config: McpConfig): { server: McpServer; close: 
     description: "Start an asynchronous Delphi build or rebuild. Writes build artifacts and may create/update project .res files. Returns a jobId; use get_build_status for logs and diagnostics. Does not execute the generated program.",
     inputSchema: z.object({ ...selection, rebuild: z.boolean().default(false) }).strict(),
     annotations: writes
-  }, (args) => result(async () => jobs.start(await projects.getBuildPlan(args))));
+  }, (args, extra) => result(async () => {
+    const plan = await projects.getBuildPlan(args);
+    if (extra.signal.aborted) throw new Error("Build request was cancelled");
+    return jobs.start(plan, extra.signal);
+  }));
 
   server.registerTool("get_build_status", {
     description: "Read a build job and a page of its log. Offsets and limits count JavaScript string characters; continue with nextOffset. Jobs are session-local; only the 50 most recently completed jobs are retained.",
@@ -79,7 +83,7 @@ export function createMcpServer(config: McpConfig): { server: McpServer; close: 
   server.registerTool("set_output_path", {
     description: "Persist DCC_ExeOutput for one explicit configuration/platform in a UTF-8 .dproj. The effective output directory must remain inside configured roots. Fails while that project is building.",
     inputSchema: z.object({ ...editSelection, outputPath: z.string().trim().min(1) }).strict(),
-    annotations: { ...writes, idempotentHint: true }
+    annotations: writes
   }, (args) => result(() => projects.setOutputPath(args)));
 
   server.registerTool("set_project_version", {

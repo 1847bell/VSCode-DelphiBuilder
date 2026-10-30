@@ -20,6 +20,26 @@ const releaseOptions = {
 };
 
 describe("dprojVersion", () => {
+  it("preserves effective conditional and inherited raw metadata with initial properties", () => {
+    const source = `<Project>
+  <PropertyGroup><Company>BaseCo</Company><VerInfo_Keys>CompanyName=$(Company);ProductName=$(Config);FileVersion=1;ProductVersion=1</VerInfo_Keys></PropertyGroup>
+  <PropertyGroup Condition="'$(Config)'=='Debug' and '$(Platform)'=='Win32'"><VerInfo_Build>1</VerInfo_Build></PropertyGroup>
+  <PropertyGroup Condition="'$(REVIEW_FLAVOR)'=='customer' and '$(Config)'=='Debug' and '$(Platform)'=='Win32'">
+    <Company>CustomerCo</Company><VerInfo_Keys>$(VerInfo_Keys);LegalCopyright=$(Company) copyright</VerInfo_Keys>
+  </PropertyGroup>
+</Project>`;
+    const selected = { ...options, initialProperties: { REVIEW_FLAVOR: "customer" } };
+    const updated = updateDprojVersion(source, "3.4.5.6", selected);
+    const result = evaluateDproj(updated, projectFile, selected);
+    expect(readDprojVersion(updated, selected)).toBe("3.4.5.6");
+    expect(result.properties.VerInfo_Keys).toContain("CompanyName=BaseCo");
+    expect(result.properties.VerInfo_Keys).toContain("LegalCopyright=CustomerCo copyright");
+    expect(updated).toContain("ProductName=$(Config)");
+    expect(updated).toContain("LegalCopyright=$(Company) copyright");
+    expect(readDprojVersion(updated, { ...selected, configuration: "Release" })).toBe("1");
+    expect(readDprojVersion(updated, { ...selected, platform: "Win64" })).toBe("1");
+  });
+
   it("reads FileVersion when ProductVersion has a different value", () => {
     const versioned = content.replace(
       "    <MainSource>Sample.dpr</MainSource>",

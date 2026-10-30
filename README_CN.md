@@ -1,12 +1,16 @@
 # Delphi DCC Builder
 
+> **开发中 / 试验性功能：MCP 功能尚未完成真实业务项目与独立用户环境下的完整实机测试，不保证稳定性或生产可用性。** 当前验证仅包括自动化测试与本机 XE7 示例冒烟，不等于完整功能验收。请仅在已备份的项目副本上试用。
+
 在 Visual Studio Code 中直接调用 Delphi 命令行编译器编译项目。扩展会读取 `.dproj` 配置，生成可查看的 Build Plan，运行 `DCC32.exe` 或 `DCC64.exe`，并将编译诊断发布到 Problems 面板。
 
 链接：[代码仓库](https://github.com/1847bell/VSCode-DelphiBuilder) · [问题与功能请求](https://github.com/1847bell/VSCode-DelphiBuilder/issues) · [Delphi 版本配置说明](docs/DELPHI_VERSION_CONFIGURATION.md) · [English README](README.md)
 
 ## MCP 独立开发分支
 
-**`mcp-only` 是长期独立的 MCP 开发分支，永久不合并回 `main`。后续仅开发 MCP 相关功能，不在此分支开展 VS Code 插件功能开发。** 现有插件代码保留，供 MCP 共用 Delphi 编译核心；MCP 不需要启动 VS Code。
+**`DelphiBuilder-MCP` 是长期独立的 MCP 开发分支，永久不合并回 `main`。后续仅开发 MCP 相关功能，不在此分支开展 VS Code 插件功能开发。** 现有插件代码保留，供 MCP 共用 Delphi 编译核心；MCP 不需要启动 VS Code。
+
+试用入口：[中文试用手册](docs/MCP_TRIAL_GUIDE_CN.md) · [AI Skill / 可复用提示词](skills/delphi-builder-mcp/SKILL.md)。`npm run package:mcp` 输出 `release/DelphiBuilder-MCP-<版本>.zip`、解包目录与 SHA-256 校验文件。ZIP 包含已打入 JS 的 npm 运行依赖、版本配置、文档、依赖许可和示例项目；解压后无需 `npm install`、VS Code 或 VSIX。请另外安装 Node.js 22/24 LTS 与合法的 Delphi 工具链。
 
 ### 安装与启动
 
@@ -37,6 +41,10 @@ npm run start:mcp -- --config D:/OthCode/DelphiBuilder/mcp.config.json
 
 `roots` 必须是已存在的可信项目目录。配置文件内的相对目录和工具路径相对于配置文件；工具参数中的相对 `projectFile` 相对于第一个 root。相对输出路径则相对于 `.dproj` 所在目录，并保留 `$(Config)`、`$(Platform)` 等可解析的项目属性表达式。配置可额外提供 `rsvarsPath`、`brcc32Path`、`additionalArguments` 和 `environment`；这些只能由本地配置指定，不能通过工具调用覆盖。`compiler64Path` 可省略；仅查询项目信息时不需要配置编译器。机器专用的 `mcp.config.json` 已加入 Git 忽略规则。
 
+配置文件支持带或不带 BOM 的 UTF-8，包括 Windows PowerShell 生成的文件。修改输出路径时，`$(DCC_ExeOutput)` 引用修改前的有效输出目录，并在保存时固化一次；后续查询不会重复追加后缀。
+
+项目查询、修改和编译计划使用相同的 BDS、rsvars 和本地配置属性环境。版本修改保留生效的非版本元数据，并在表达式含义不变时保留原始表达式。
+
 ### MCP 客户端配置
 
 将下列条目放入客户端支持的 MCP 配置中，并替换为本机绝对路径：
@@ -61,7 +69,7 @@ npm run start:mcp -- --config D:/OthCode/DelphiBuilder/mcp.config.json
 | `get_project_info` | 查询配置列表、当前配置/平台、主源、有效输出目录、版本、资源和警告。 |
 | `get_build_plan` | 生成编译计划，不编译、不写文件；响应不包含继承的环境变量。 |
 | `start_build` | 异步编译，`rebuild: true` 时重新编译；立即返回 `jobId`。 |
-| `get_build_status` | 获取状态、日志分页、退出信息、诊断及预期/现有产物。 |
+| `get_build_status` | 获取状态、编译计划警告、日志分页、退出信息、诊断及预期/现有产物。 |
 | `cancel_build` | 请求取消；继续查询状态直至进入终态。 |
 | `set_output_path` | 修改指定配置与平台的 `DCC_ExeOutput`。 |
 | `set_project_version` | 修改指定配置与平台的文件/产品版本，每段为 0–65535，允许 1–4 段。 |
@@ -73,13 +81,14 @@ npm run start:mcp -- --config D:/OthCode/DelphiBuilder/mcp.config.json
 ### 写入与生命周期边界
 
 - 同一项目的编译和修改互斥；不同项目可并行。项目信息查询可在编译期间使用。
-- 修改器仅接受有效 UTF-8，保留 BOM 和换行格式；写入前检查源文件是否变化。不要在 IDE 中保留未保存的 `.dproj` 修改，MCP 无法读取编辑器内存内容。
+- 修改器仅接受有效 UTF-8，保留 BOM 和换行格式；先写入同目录临时文件，检查源文件是否变化，再原子替换。并发查询只会读取完整的旧版或新版项目。不要在 IDE 中保留未保存的 `.dproj` 修改，MCP 无法读取编辑器内存内容。
 - 构建会写产物，启用资源步骤时还可能创建或更新项目 `.res`；不会自动运行生成的 EXE。输出路径、主源和资源输入/输出路径必须位于配置的 roots 内，已知符号链接越界会被拒绝。第三方库搜索路径仍可指向外部安装目录。
+- `start_build` 请求处理期间收到 MCP 取消通知，会取消尚未完成的启动或刚创建的任务；收到 `jobId` 后使用 `cancel_build`。准备、资源和 DCC 阶段之间均检查取消；已完成的文件写入不会回滚。
 - roots 检查不是操作系统沙箱：只接入可信项目和可信编译器配置，不对恶意源码、链接竞争或任意编译器行为提供隔离保证。
 - 任务只在当前服务进程内保存，保留最近完成的 50 项；服务重启后任务 ID 失效。stdin 关闭或收到退出信号时会取消活动构建并等待清理。
-- 打包产物为 `dist/mcp.js`；运行时还需要安装的 npm 依赖和相邻项目目录中的 `delphi-versions/`。不需要 VSIX，不使用 VS Code 的设置、项目分组或历史记录。
+- 部署时保留已打包的 `dist/mcp.js` 与 `delphi-versions/` 原有目录布局；npm 运行依赖已包含在 JS 中。不需要 VSIX，不使用 VS Code 的设置、项目分组或历史记录。
 
-开发检查：`npm run check`、`npm test`、`npm run compile:mcp`。下文保留原 VS Code 插件说明，MCP 使用方式以上述章节为准。
+开发检查：`npm run check`、`npm test`、`npm run compile:mcp`；Windows 试用打包：`npm run package:mcp`（需要 PowerShell）。安装与验收流程见[试用手册](docs/MCP_TRIAL_GUIDE_CN.md)。下文保留原 VS Code 插件说明，MCP 使用方式以上述章节为准。
 
 ## 主要功能
 

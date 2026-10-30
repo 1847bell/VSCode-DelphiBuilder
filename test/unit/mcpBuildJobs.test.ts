@@ -59,6 +59,12 @@ describe("MCP asynchronous build lifecycle", () => {
     expect((await until(next.jobId, terminal)).state).toBe("succeeded");
   });
 
+  it("exposes plan warnings in every job status", async () => {
+    const started = jobs.start({ ...plan("process.exitCode = 0"), warnings: ["parser warning"] });
+    const done = await until(started.jobId, terminal);
+    expect(done.warnings).toEqual(["parser warning"]);
+  });
+
   it("cancels before spawn without allowing a second project operation to overlap", async () => {
     const started = jobs.start(plan("process.stdin.resume()"));
     expect(() => jobs.start(plan("process.exitCode = 0"))).toThrow("busy");

@@ -19,6 +19,7 @@ export interface BuildJobStatus extends BuildJobSummary {
   nextOffset: number;
   result?: JobResult;
   diagnostics: CompilerDiagnostic[];
+  warnings: string[];
   expectedArtifacts: string[];
   existingArtifacts: string[];
   error?: string;
@@ -43,7 +44,6 @@ interface Job {
   release: () => void;
   runner: CompilerRunner;
   cancelRequested: boolean;
-  cancelTimer?: NodeJS.Timeout;
   cancellationInFlight?: Promise<void>;
   task?: Promise<void>;
 }
@@ -59,21 +59,15 @@ export class BuildJobs {
     private readonly outputEncoding: "system" | "cp936" | "utf8"
   ) {}
 
-  public start(plan: BuildPlan): BuildJobSummary {
+  public start(plan: BuildPlan, signal?: AbortSignal): BuildJobSummary {
     if (this.closed) throw new Error("Build service is closed");
     const release = this.access.lock(plan.projectFile);
     const job: Job = {
-      id: randomUUID(),
-      plan,
-      state: "queued",
-      logs: "",
-      diagnostics: [],
-      release,
-      runner: new CompilerRunner(),
-      cancelRequested: false
+      id: randomUUID(), plan, state: "queued", logs: "", diagnostics: [], release,
+      runner: new CompilerRunner(), cancelRequested: signal?.aborted ?? false
     };
     this.jobs.set(job.id, job);
-    job.task = Promise.resolve().then(() => this.execute(job));
+    job.task = Promise.resolve().then(() => this.execute(job, signal));
     return { jobId: job.id, state: job.state };
   }
 
@@ -92,8 +86,9 @@ export class BuildJobs {
       totalLength: job.logs.length,
       nextOffset: end,
       diagnostics: job.diagnostics,
+      warnings: [...job.plan.warnings],
       expectedArtifacts: [...job.plan.expectedArtifacts],
-      existingArtifacts: job.plan.expectedArtifacts.filter(existsSync)
+      existingArtifacts: job.plan.expectedArtifacts.filter((file) => existsSync(file))
     };
     if (job.result) response.result = job.result;
     if (job.error) response.error = job.error;
@@ -103,11 +98,14 @@ export class BuildJobs {
   public async cancel(jobId: string): Promise<{ jobId: string; state: JobState; cancelled: boolean }> {
     const job = this.jobs.get(jobId);
     if (!job) throw new Error(`Unknown build job: ${jobId}`);
-    if (job.state === "succeeded" || job.state === "failed" || job.state === "cancelled") {
-      return { jobId, state: job.state, cancelled: false };
-    }
+    if (this.isTerminal(job.state)) return { jobId, state: job.state, cancelled: false };
     job.cancelRequested = true;
-    await this.requestCancel(job);
+    if (!job.cancellationInFlight) {
+      job.cancellationInFlight = job.runner.cancel().then(() => undefined).catch((error: unknown) => {
+        job.error = error instanceof Error ? error.message : String(error);
+      }).finally(() => { job.cancellationInFlight = undefined; });
+    }
+    await job.cancellationInFlight;
     return { jobId, state: job.state, cancelled: true };
   }
 
@@ -121,10 +119,13 @@ export class BuildJobs {
     return this.closing;
   }
 
-  private async execute(job: Job): Promise<void> {
+  private async execute(job: Job, signal?: AbortSignal): Promise<void> {
     const startedAt = Date.now();
     let terminalState: JobState = "failed";
     job.state = "running";
+    const onAbort = (): void => { void this.cancel(job.id).catch(() => undefined); };
+    signal?.addEventListener("abort", onAbort, { once: true });
+    job.cancelRequested ||= signal?.aborted ?? false;
     try {
       const encoding = await resolveOutputEncoding(this.outputEncoding);
       await this.access.assertBuildPaths(job.plan);
@@ -138,7 +139,7 @@ export class BuildJobs {
       }
       const coreResult = await job.runner.run(job.plan, encoding, (text) => {
         job.logs += text;
-      });
+      }, signal);
       job.result = {
         stage: coreResult.stage,
         exitCode: coreResult.exitCode,
@@ -163,35 +164,13 @@ export class BuildJobs {
       };
       terminalState = job.cancelRequested ? "cancelled" : "failed";
     } finally {
-      clearInterval(job.cancelTimer);
-      job.cancelTimer = undefined;
+      signal?.removeEventListener("abort", onAbort);
       await job.cancellationInFlight;
       job.release();
       job.state = terminalState;
       this.completed.push(job.id);
       while (this.completed.length > 50) this.jobs.delete(this.completed.shift()!);
     }
-  }
-
-  private async requestCancel(job: Job): Promise<void> {
-    if (!job.cancelTimer && !this.isTerminal(job.state)) {
-      job.cancelTimer = setInterval(() => {
-        void this.cancelChild(job);
-      }, 25);
-    }
-    await this.cancelChild(job);
-  }
-
-  private async cancelChild(job: Job): Promise<void> {
-    if (!job.runner.running || this.isTerminal(job.state)) return;
-    if (!job.cancellationInFlight) {
-      job.cancellationInFlight = job.runner.cancel().then(() => undefined).catch((error: unknown) => {
-        job.error = error instanceof Error ? error.message : String(error);
-      }).finally(() => {
-        job.cancellationInFlight = undefined;
-      });
-    }
-    await job.cancellationInFlight;
   }
 
   private isTerminal(state: JobState): boolean {
