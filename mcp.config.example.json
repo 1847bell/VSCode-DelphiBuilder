@@ -1,0 +1,8 @@
+{
+  "roots": ["."],
+  "compilerPath": "C:/Program Files (x86)/Embarcadero/Studio/15.0/bin/DCC32.exe",
+  "compiler64Path": "C:/Program Files (x86)/Embarcadero/Studio/15.0/bin/DCC64.exe",
+  "version": "XE7",
+  "resourceBuild": true,
+  "outputEncoding": "system"
+}

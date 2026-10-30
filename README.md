@@ -4,6 +4,71 @@ Build Delphi projects directly from Visual Studio Code with the Delphi command-l
 
 Links: [Repository](https://github.com/1847bell/VSCode-DelphiBuilder) · [Issues and feature requests](https://github.com/1847bell/VSCode-DelphiBuilder/issues) · [Delphi version configuration guide](docs/DELPHI_VERSION_CONFIGURATION.md) · [中文说明](README_CN.md)
 
+## Independent MCP branch
+
+**`mcp-only` is a permanent, independent MCP development branch. It must not be merged into `main`; future work on this branch is limited to MCP functionality.** The existing VS Code extension is retained without feature changes. The MCP server reuses its Delphi core and runs without VS Code.
+
+### Setup
+
+Requires Windows, Node.js 22 or later, and a working local Delphi XE7/BDS 15.0 installation.
+
+```powershell
+npm ci
+npm run compile:mcp
+Copy-Item mcp.config.example.json mcp.config.json
+# Set trusted roots and compiler paths in mcp.config.json
+```
+
+Configure your MCP client to launch the server directly, using absolute paths:
+
+```json
+{
+  "mcpServers": {
+    "delphi-builder": {
+      "command": "node",
+      "args": [
+        "D:/OthCode/DelphiBuilder/dist/mcp.js",
+        "--config",
+        "D:/OthCode/DelphiBuilder/mcp.config.json"
+      ]
+    }
+  }
+}
+```
+
+The transport is stdio. Launching the server manually and seeing it wait for input is normal. Clients should launch Node directly rather than npm, whose startup output may interfere with the protocol. `npm run start:mcp -- --config <absolute-config-path>` is available for manual use.
+
+Use `mcp.config.example.json` as the configuration template. `roots` must contain existing trusted project directories. Configuration-relative roots and executable paths resolve against the configuration file, not the process working directory. Tool-relative `projectFile` paths resolve against the first root; relative output paths resolve against the `.dproj` directory. Output edits preserve resolvable expressions such as `$(Config)` and `$(Platform)`.
+
+`compilerPath` configures Win32; optional `compiler64Path` configures Win64. Project inspection does not require a compiler path. Other settings are `version` (default `XE7`), `resourceBuild` (default `true`), `outputEncoding` (`system`, `cp936`, `utf8`), optional `rsvarsPath` and `brcc32Path`, `additionalArguments`, and `environment`. Compiler paths, arguments and environment overrides come only from the trusted local configuration, never from tool arguments. Local `mcp.config.json` is ignored by Git.
+
+### Tools
+
+| Tool | Behavior |
+| --- | --- |
+| `get_project_info` | Inspect configurations, selected configuration/platform, main source, effective output directory, version, resources and warnings. |
+| `get_build_plan` | Return a build plan without writing files or compiling; inherited environment values are omitted. |
+| `start_build` | Start an asynchronous build; pass `rebuild: true` to rebuild. Returns a `jobId`. |
+| `get_build_status` | Read state, paginated logs, process result, structured diagnostics and expected/existing artifacts. |
+| `cancel_build` | Request cancellation; query status until terminal. |
+| `set_output_path` | Persist `DCC_ExeOutput` for one explicit configuration/platform. |
+| `set_project_version` | Persist file/product version for one explicit configuration/platform; 1–4 numeric components, each 0–65535. |
+
+Project tools accept `projectFile`. Inspection/build tools default to the `.dproj` configuration and `Win32` when omitted. Mutation tools require explicit `configuration` and `platform`, plus `outputPath` or `version` respectively.
+
+For example, call `start_build` with `{"projectFile":"App/App.dproj","configuration":"Release","platform":"Win64","rebuild":true}`. Query `get_build_status` with `{"jobId":"returned-id","offset":0,"limit":16384}` and continue with `nextOffset`. Logs use UTF-16 code-unit offsets, with a maximum page size of 65536. Drain pages until the state is terminal and `nextOffset === totalLength`. States are `queued`, `running`, `succeeded`, `failed`, and `cancelled`. Diagnostics include file, line/column when available, severity, compiler code and message. Preparation errors also expose `error`. Invalid tool operations return MCP `isError`; compiler failures are reported through job state.
+
+### Safety and lifecycle
+
+- Builds and edits are mutually exclusive per project; different projects can build concurrently. Project inspection remains available during builds.
+- Project mutations require valid UTF-8, preserve BOM/newlines, and compare original bytes before writing. Save editor changes before calling MCP; unsaved VS Code/IDE buffers are not visible to this process.
+- Builds write artifacts and may create/update project `.res` files. They never automatically execute the resulting program. Main source, resource input/output and recognized artifact/output paths must remain within configured roots; known symlink escapes are rejected. External library search paths remain supported.
+- Root checks are not an OS sandbox. Only allow trusted projects/compiler configuration; malicious source, filesystem races and arbitrary compiler behavior are not isolated.
+- Jobs are process-local. The latest 50 completed jobs are retained; restarting invalidates IDs. Closing stdin or sending an exit signal cancels active builds and waits for cleanup.
+- Deploy `dist/mcp.js` together with installed npm dependencies and the project's `delphi-versions/` directory. No VSIX, VS Code settings, project groups or editor history are required.
+
+Development checks: `npm run check`, `npm test`, `npm run compile:mcp`. See [中文 MCP 说明](README_CN.md#mcp-独立开发分支) for the full Chinese setup. The original extension documentation follows below.
+
 ## Features
 
 - Build Win32 projects with `DCC32.exe` and optionally build Win64 projects with `DCC64.exe`.

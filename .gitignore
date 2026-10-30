@@ -8,3 +8,4 @@ test/fixtures/bin/
 test/fixtures/dcu/
 test/fixtures/generated/
 test/fixtures/ProjectResourceSample.res
+mcp.config.json

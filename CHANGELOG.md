@@ -1,5 +1,14 @@
 # Change Log
 
+## MCP branch — Unreleased
+
+- Keep `mcp-only` as a permanent independent MCP-only branch; do not merge it into `main`.
+- Add a standalone stdio MCP server with seven tools for project inspection, build plans, asynchronous build/status/cancellation, scoped output paths, and project versions.
+- Load trusted project roots and compiler settings from an independent JSON configuration; no VS Code runtime is required.
+- Preserve UTF-8 project encoding/BOM and configuration isolation, enforce project write/build locks and root checks, and return structured compiler diagnostics with paginated logs.
+- Cancel active builds on shutdown and retain the most recent 50 completed jobs per process.
+- Add project-boundary, project-mutation, and real-child-process lifecycle regression coverage.
+
 ## 0.2.20
 
 - Edit version fields in the existing configuration and platform property group, preserving output paths, manifests, and raw metadata expressions. Add a standard scoped group only when none exists.
